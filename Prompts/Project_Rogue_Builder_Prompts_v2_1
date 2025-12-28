@@ -1,0 +1,89 @@
+# Project Rogue: AI Builder Prompt Pack (v2.1)
+
+## Global rules (paste at top of every session)
+- Do not invent requirements beyond what is stated.
+- If ambiguity exists, list assumptions explicitly and keep them minimal.
+- Output code only for the requested file/module.
+- Prefer deterministic rule-based logic. No ML/NLP unless explicitly asked.
+- Match the database schema exactly. Do not rename columns.
+
+---
+
+## Prompt 1: Supabase schema + RLS plan
+You are a senior full-stack engineer. Using the SQL schema below, propose Supabase RLS policies for:
+- Deal Owner: full access to investments they are assigned to in investment_access.
+- IC Member: read-only access to assigned investments.
+- Founders: no direct DB access in MVP (submit via token endpoint).
+Also propose indices for performance.
+
+[PASTE SQL HERE]
+
+---
+
+## Prompt 2: Flag engine (pure function)
+Implement a pure function `evaluateFlags({forecast, actuals})` that returns:
+- status: GREEN/AMBER/RED
+- flags: list of flag records to insert (type, metric, threshold, actual_value, forecast_value, delta_pct)
+Rules:
+- Revenue Miss: actual_revenue < 50% of forecast revenue for the quarter
+- Traction Miss: actual_traction < 50% of forecast traction
+- Burn Spike: actual_burn > 130% of forecast burn
+- Burn Critical: actual_burn > 160% of forecast burn
+- Runway Risk: runway < 6
+- Runway Critical: runway < 3
+- Late Update handled elsewhere
+Status logic:
+- Green if revenue>=80% AND traction>=80% AND burn<=130% AND runway>=6
+- Amber if any metric is in the mid band (rev/traction 50–80, burn 130–160, runway 3–6)
+- Red if any critical breach (rev/traction<50, burn>160, runway<3)
+
+Provide unit tests for edge cases (exactly at thresholds).
+
+---
+
+## Prompt 3: Founder update endpoint
+Implement an API route that:
+- Accepts `token`, `quarter_index`, and founder update payload.
+- Validates token exists, not expired, not used.
+- Validates numeric fields and quarter_index uniqueness.
+- Inserts founder_updates row
+- Calls flag engine to insert flags
+- Marks token as used
+- Returns derived status + flags
+
+Tech: Next.js App Router route handler (TypeScript). DB: Supabase client.
+
+---
+
+## Prompt 4: Forecast entry UI (table input)
+Build a Next.js page component:
+- 8 rows (quarters 1..8)
+- Columns: revenue, burn, traction (optional headcount)
+- Input validation (numeric, >=0)
+- Save draft, then Publish (creates forecasts v1 + forecast_metrics rows)
+- Require rationale only if version > 1
+
+Use shadcn/ui table and inputs. No styling bikeshedding.
+
+---
+
+## Prompt 5: Investment detail graphs
+Build a component that renders:
+- Revenue line chart (forecast vs actual)
+- Burn line chart (forecast vs actual)
+- Traction line chart (forecast vs actual)
+- Runway chart (actual points)
+Input: arrays of points with quarter_index mapped to labels (Q1..Q8) and values.
+Use Recharts. Keep it simple. No fancy tooltips beyond defaults.
+
+---
+
+## Prompt 6: Pilot test script
+Write a script or seed routine to:
+- Create 3 investments with forecasts
+- Submit 2 quarters of actuals each
+- Ensure flags trigger across all types at least once
+- Output a summary table of status and flags per investment
+
+---
+
