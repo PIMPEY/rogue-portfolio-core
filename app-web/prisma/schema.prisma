@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum InvestmentType {
+  SAFE
+  CLN
+  EQUITY
+  OTHER
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  EXITED
+  WRITTEN_OFF
+}
+
+enum FounderUpdateStatus {
+  SUBMITTED
+  LATE
+  OVERDUE
+}
+
+enum FlagStatus {
+  NEW
+  ACKNOWLEDGED
+  MONITORING
+  RESOLVED
+}
+
+enum FlagType {
+  REVENUE_MISS
+  TRACTION_MISS
+  BURN_SPIKE
+  BURN_CRITICAL
+  RUNWAY_RISK
+  RUNWAY_CRITICAL
+  LATE_UPDATE
+}
+
+enum MetricType {
+  REVENUE
+  BURN
+  TRACTION
+  HEADCOUNT
+}
+
+model Investment {
+  id                String            @id @default(uuid())
+  companyName       String
+  sector            String
+  stage             String
+  investmentAmount  Float
+  currency          String            @default("USD")
+  investmentType    InvestmentType
+  investmentDate    DateTime
+  status            InvestmentStatus  @default(ACTIVE)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  founders          Founder[]
+  forecasts         Forecast[]
+  founderUpdates    FounderUpdate[]
+  flags             Flag[]
+  notes             Note[]
+}
+
+model Founder {
+  id            String      @id @default(uuid())
+  investmentId  String
+  investment    Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  name          String
+  email         String
+  createdAt     DateTime    @default(now())
+}
+
+model Forecast {
+  id              String          @id @default(uuid())
+  investmentId    String
+  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  version         Int
+  startQuarter    DateTime
+  horizonQuarters Int             @default(8)
+  rationale       String?
+  createdAt       DateTime        @default(now())
+  metrics         ForecastMetric[]
+  @@unique([investmentId, version])
+}
+
+model ForecastMetric {
+  id          String      @id @default(uuid())
+  forecastId  String
+  forecast    Forecast    @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+  metric      MetricType
+  quarterIndex Int
+  value       Float
+  createdAt   DateTime    @default(now())
+  @@unique([forecastId, metric, quarterIndex])
+}
+
+model FounderUpdate {
+  id                String              @id @default(uuid())
+  investmentId      String
+  investment        Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  quarterIndex      Int
+  dueDate           DateTime
+  submittedAt       DateTime            @default(now())
+  status            FounderUpdateStatus @default(SUBMITTED)
+  actualRevenue     Float
+  actualBurn        Float
+  actualRunwayMonths Float
+  actualTraction    Float
+  narrativeGood     String?
+  narrativeBad      String?
+  narrativeHelp     String?
+  createdAt         DateTime            @default(now())
+  flags             Flag[]
+  @@unique([investmentId, quarterIndex])
+}
+
+model Flag {
+  id              String          @id @default(uuid())
+  investmentId    String
+  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  founderUpdateId String?
+  founderUpdate   FounderUpdate?  @relation(fields: [founderUpdateId], references: [id], onDelete: SetNull)
+  type            FlagType
+  metric          MetricType?
+  threshold       String
+  actualValue     Float?
+  forecastValue   Float?
+  deltaPct        Float?
+  status          FlagStatus      @default(NEW)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  resolvedAt      DateTime?
+  resolutionNote  String?
+}
+
+model Note {
+  id             String      @id @default(uuid())
+  investmentId   String
+  investment     Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  authorUserId   String
+  body           String
+  createdAt      DateTime    @default(now())
+}

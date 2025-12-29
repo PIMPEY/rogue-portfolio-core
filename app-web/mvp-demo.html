@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Rogue - Portfolio Dashboard MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Portfolio Dashboard</h1>
+            <p class="mt-2 text-gray-600">Track investment performance and identify risks</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Total Investments</div>
+                <div class="mt-2 text-3xl font-bold text-gray-900">20</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">On Track</div>
+                <div class="mt-2 text-3xl font-bold text-green-600">8</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Needs Attention</div>
+                <div class="mt-2 text-3xl font-bold text-yellow-600">7</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Critical</div>
+                <div class="mt-2 text-3xl font-bold text-red-600">5</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow mb-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Investments</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sector</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Investment</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Runway</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="investment-table">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="investment-detail" class="hidden">
+            <div class="mb-4">
+                <button onclick="hideDetail()" class="text-blue-600 hover:text-blue-900">← Back to Portfolio</button>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex items-start justify-between mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900" id="detail-company-name"></h1>
+                        <div class="mt-2 flex items-center space-x-4">
+                            <span class="text-gray-600" id="detail-sector"></span>
+                            <span class="text-gray-400">•</span>
+                            <span class="text-gray-600" id="detail-stage"></span>
+                            <span class="text-gray-400">•</span>
+                            <span class="text-gray-600" id="detail-amount"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="h-3 w-3 rounded-full mr-2" id="detail-status-dot"></span>
+                        <span class="text-lg font-semibold text-gray-900" id="detail-status"></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Revenue: Forecast vs Actual</h3>
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Burn: Forecast vs Actual</h3>
+                        <canvas id="burnChart"></canvas>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Traction: Forecast vs Actual</h3>
+                        <canvas id="tractionChart"></canvas>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Runway Over Time</h3>
+                        <canvas id="runwayChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Active Flags</h3>
+                    </div>
+                    <div class="p-6" id="flags-container"></div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Founder Updates</h3>
+                    </div>
+                    <div class="p-6" id="updates-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const investments = [
+            { id: 1, name: 'CloudSync AI', sector: 'SaaS', stage: 'Pre-Seed', amount: 850000, status: 'RED', runway: 2.3, flags: 3, updates: 4 },
+            { id: 2, name: 'PayFlow Pro', sector: 'Fintech', stage: 'Seed', amount: 1200000, status: 'GREEN', runway: 12.5, flags: 0, updates: 1 },
+            { id: 3, name: 'MediTrack', sector: 'Healthcare', stage: 'Series A', amount: 2100000, status: 'AMBER', runway: 5.8, flags: 2, updates: 2 },
+            { id: 4, name: 'ShopGenius', sector: 'E-commerce', stage: 'Seed', amount: 950000, status: 'RED', runway: 2.1, flags: 4, updates: 4 },
+            { id: 5, name: 'NeuralNet Labs', sector: 'AI/ML', stage: 'Series A', amount: 1800000, status: 'AMBER', runway: 4.5, flags: 2, updates: 3 },
+            { id: 6, name: 'GreenEnergy Co', sector: 'ClimateTech', stage: 'Series B', amount: 3500000, status: 'GREEN', runway: 18.2, flags: 0, updates: 3 },
+            { id: 7, name: 'LearnFast', sector: 'EdTech', stage: 'Pre-Seed', amount: 600000, status: 'AMBER', runway: 5.2, flags: 1, updates: 2 },
+            { id: 8, name: 'SecureShield', sector: 'Cybersecurity', stage: 'Seed', amount: 1100000, status: 'GREEN', runway: 14.8, flags: 0, updates: 3 },
+            { id: 9, name: 'DataPulse', sector: 'SaaS', stage: 'Series A', amount: 1950000, status: 'RED', runway: 2.8, flags: 3, updates: 1 },
+            { id: 10, name: 'FinTech Hub', sector: 'Fintech', stage: 'Series B', amount: 2800000, status: 'AMBER', runway: 6.1, flags: 1, updates: 4 },
+        ];
+
+        const detailData = {
+            1: {
+                name: 'CloudSync AI',
+                sector: 'SaaS',
+                stage: 'Pre-Seed',
+                amount: '$850,000',
+                status: 'RED',
+                revenue: { forecast: [12000, 14400, 17280, 20736, 24883, 29860, 35832, 42998], actual: [6000, 7200, 8640, 10368] },
+                burn: { forecast: [75000, 78750, 82688, 86822, 91163, 95721, 100507, 105532], actual: [82500, 86625, 90956, 95504] },
+                traction: { forecast: [150, 195, 253, 329, 428, 556, 723, 940], actual: [75, 97, 126, 164] },
+                runway: [8.5, 7.2, 5.8, 2.3],
+                flags: [
+                    { type: 'REVENUE_MISS', threshold: '<50% of forecast', actual: '$6,000', forecast: '$12,000', delta: '50%', status: 'NEW' },
+                    { type: 'TRACTION_MISS', threshold: '<50% of forecast', actual: '75', forecast: '150', delta: '50%', status: 'NEW' },
+                    { type: 'RUNWAY_CRITICAL', threshold: '<3 months runway', actual: '2.3 months', status: 'NEW' }
+                ],
+                updates: [
+                    { quarter: 1, date: '2024-04-01', revenue: '$6,000', burn: '$82,500', traction: '75', runway: '8.5 months', good: 'Strong customer acquisition', bad: 'Higher than expected burn', help: 'Need help with hiring' },
+                    { quarter: 2, date: '2024-07-01', revenue: '$7,200', burn: '$86,625', traction: '97', runway: '7.2 months', good: 'Product improvements', bad: 'Churn higher than expected', help: 'Need introductions to enterprise customers' },
+                    { quarter: 3, date: '2024-10-01', revenue: '$8,640', burn: '$90,956', traction: '126', runway: '5.8 months', good: 'New feature launch', bad: 'Sales cycle longer', help: 'Need sales training resources' },
+                    { quarter: 4, date: '2025-01-01', revenue: '$10,368', burn: '$95,504', traction: '164', runway: '2.3 months', good: 'Partnership opportunities', bad: 'Cash runway critical', help: 'Need immediate bridge funding' }
+                ]
+            }
+        };
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'GREEN': return 'bg-green-500';
+                case 'AMBER': return 'bg-yellow-500';
+                case 'RED': return 'bg-red-500';
+                default: return 'bg-gray-500';
+            }
+        }
+
+        function getStatusTextColor(status) {
+            switch(status) {
+                case 'GREEN': return 'text-green-600';
+                case 'AMBER': return 'text-yellow-600';
+                case 'RED': return 'text-red-600';
+                default: return 'text-gray-600';
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('investment-table');
+            tbody.innerHTML = investments.map(inv => `
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="showDetail(${inv.id})">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${inv.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${inv.sector}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${inv.stage}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(inv.amount)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <span class="h-2 w-2 rounded-full ${getStatusColor(inv.status)} mr-2"></span>
+                            <span class="text-sm font-medium ${getStatusTextColor(inv.status)}">${inv.status}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${inv.runway.toFixed(1)} months</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${inv.flags}</td>
+                </tr>
+            `).join('');
+        }
+
+        function showDetail(id) {
+            const data = detailData[id];
+            if (!data) return;
+
+            document.getElementById('investment-table').parentElement.parentElement.parentElement.classList.add('hidden');
+            document.getElementById('investment-detail').classList.remove('hidden');
+
+            document.getElementById('detail-company-name').textContent = data.name;
+            document.getElementById('detail-sector').textContent = data.sector;
+            document.getElementById('detail-stage').textContent = data.stage;
+            document.getElementById('detail-amount').textContent = data.amount;
+            document.getElementById('detail-status').textContent = data.status;
+            document.getElementById('detail-status-dot').className = `h-3 w-3 rounded-full mr-2 ${getStatusColor(data.status)}`;
+
+            const quarters = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8'];
+
+            new Chart(document.getElementById('revenueChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        { label: 'Forecast', data: data.revenue.forecast, borderColor: '#3b82f6', borderWidth: 2, fill: false },
+                        { label: 'Actual', data: [...data.revenue.actual, null, null, null, null], borderColor: '#10b981', borderWidth: 2, fill: false }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { ticks: { callback: value => '$' + (value/1000) + 'k' } } } }
+            });
+
+            new Chart(document.getElementById('burnChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        { label: 'Forecast', data: data.burn.forecast, borderColor: '#3b82f6', borderWidth: 2, fill: false },
+                        { label: 'Actual', data: [...data.burn.actual, null, null, null, null], borderColor: '#ef4444', borderWidth: 2, fill: false }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { ticks: { callback: value => '$' + (value/1000) + 'k' } } } }
+            });
+
+            new Chart(document.getElementById('tractionChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        { label: 'Forecast', data: data.traction.forecast, borderColor: '#3b82f6', borderWidth: 2, fill: false },
+                        { label: 'Actual', data: [...data.traction.actual, null, null, null, null], borderColor: '#10b981', borderWidth: 2, fill: false }
+                    ]
+                },
+                options: { responsive: true }
+            });
+
+            new Chart(document.getElementById('runwayChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters.slice(0, data.runway.length),
+                    datasets: [{ label: 'Runway (months)', data: data.runway, borderColor: '#8b5cf6', borderWidth: 2, fill: false }]
+                },
+                options: { responsive: true }
+            });
+
+            document.getElementById('flags-container').innerHTML = data.flags.length === 0
+                ? '<p class="text-gray-500">No flags</p>'
+                : data.flags.map(flag => `
+                    <div class="border border-gray-200 rounded-lg p-4 mb-3">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${flag.type.includes('CRITICAL') ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}">${flag.type}</span>
+                                <p class="mt-2 text-sm text-gray-900">${flag.threshold}</p>
+                                <p class="mt-1 text-sm text-gray-600">Actual: ${flag.actual} vs Forecast: ${flag.forecast} (${flag.delta})</p>
+                            </div>
+                            <span class="text-xs font-medium ${flag.status === 'NEW' ? 'text-red-600' : 'text-yellow-600'}">${flag.status}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+            document.getElementById('updates-container').innerHTML = data.updates.map(update => `
+                <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-medium text-gray-900">Quarter ${update.quarter}</h4>
+                        <span class="text-xs text-gray-500">${update.date}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-3">
+                        <div><span class="text-gray-500">Revenue:</span> <span class="ml-2 text-gray-900">${update.revenue}</span></div>
+                        <div><span class="text-gray-500">Burn:</span> <span class="ml-2 text-gray-900">${update.burn}</span></div>
+                        <div><span class="text-gray-500">Traction:</span> <span class="ml-2 text-gray-900">${update.traction}</span></div>
+                        <div><span class="text-gray-500">Runway:</span> <span class="ml-2 text-gray-900">${update.runway}</span></div>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-sm text-green-700"><span class="font-medium">Good:</span> ${update.good}</p>
+                        <p class="text-sm text-red-700"><span class="font-medium">Bad:</span> ${update.bad}</p>
+                        <p class="text-sm text-blue-700"><span class="font-medium">Help needed:</span> ${update.help}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function hideDetail() {
+            document.getElementById('investment-detail').classList.add('hidden');
+            document.getElementById('investment-table').parentElement.parentElement.parentElement.classList.remove('hidden');
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
