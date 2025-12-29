@@ -15,11 +15,31 @@ import {
 
 interface Investment {
   id: string;
+  icReference: string;
+  icApprovalDate: string;
+  investmentExecutionDate: string;
+  dealOwner: string;
   companyName: string;
   sector: string;
+  geography: string;
   stage: string;
-  investmentAmount: number;
-  investmentDate: string;
+  investmentType: string;
+  committedCapitalLcl: number;
+  deployedCapitalLcl: number;
+  ownershipPercent: number | null;
+  coInvestors: string | null;
+  hasBoardSeat: boolean;
+  hasProRataRights: boolean;
+  hasAntiDilutionProtection: boolean;
+  localCurrency: string;
+  investmentFxRate: number;
+  valuationFxRate: number;
+  roundSizeEur: number | null;
+  enterpriseValueEur: number | null;
+  currentFairValueEur: number;
+  raisedFollowOnCapital: boolean;
+  clearProductMarketFit: boolean;
+  meaningfulRevenue: boolean;
   status: 'GREEN' | 'AMBER' | 'RED';
   founders: Array<{ name: string; email: string }>;
 }
@@ -74,13 +94,21 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    params.then(p => setId(p.id));
+    params.then(p => setId(p.id)).catch(err => {
+      console.error('Error resolving params:', err);
+      setLoading(false);
+    });
   }, [params]);
 
   useEffect(() => {
     if (!id) return;
     fetch(`/api/investments/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Investment not found');
+        }
+        return res.json();
+      })
       .then(data => {
         setData(data);
         setLoading(false);
@@ -178,12 +206,22 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600">{investment.stage}</span>
                 <span className="text-gray-400">•</span>
-                <span className="text-gray-600">{formatCurrency(investment.investmentAmount)}</span>
+                <span className="text-gray-600">{investment.geography}</span>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-600">Ref: {investment.icReference}</span>
               </div>
             </div>
-            <div className="flex items-center">
-              <span className={`h-3 w-3 rounded-full ${getStatusColor(investment.status)} mr-2`} />
-              <span className="text-lg font-semibold text-gray-900">{investment.status}</span>
+            <div className="flex items-center gap-4">
+              <Link
+                href={`/investments/${id}/edit`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                Edit Investment
+              </Link>
+              <div className="flex items-center">
+                <span className={`h-3 w-3 rounded-full ${getStatusColor(investment.status)} mr-2`} />
+                <span className="text-lg font-semibold text-gray-900">{investment.status}</span>
+              </div>
             </div>
           </div>
         </div>

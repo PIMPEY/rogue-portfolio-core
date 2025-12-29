@@ -21,6 +21,67 @@ enum InvestmentStatus {
   WRITTEN_OFF
 }
 
+enum InvestmentStage {
+  PRE_SEED
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C
+  SERIES_D_PLUS
+  GROWTH
+  OTHER
+}
+
+enum CashflowType {
+  INITIAL_INVESTMENT
+  FOLLOW_ON
+  DISTRIBUTION
+  PARTIAL_EXIT
+}
+
+enum DocumentType {
+  PITCH_DECK
+  BASE_CASE_MODEL
+  IC_MEMO
+  BUSINESS_PLAN
+}
+
+enum DocumentVersionType {
+  INITIAL
+  REVISION
+}
+
+enum AuditAction {
+  VALUATION_UPDATE
+  INVESTMENT_CREATED
+  INVESTMENT_UPDATED
+  DOCUMENT_UPLOADED
+  CASHFLOW_ADDED
+  ACTION_REQUIRED_CREATED
+  ACTION_REQUIRED_UPDATED
+  ACTION_REQUIRED_CLEARED
+}
+
+enum ActionType {
+  SUPPORT
+  FOLLOW_ON
+  MONITOR
+  EXIT_PREPARATION
+}
+
+enum ExitType {
+  M_AND_A
+  SECONDARY
+  IPO
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CLEARED
+}
+
 enum FounderUpdateStatus {
   SUBMITTED
   LATE
@@ -52,22 +113,56 @@ enum MetricType {
 }
 
 model Investment {
-  id                String            @id @default(uuid())
-  companyName       String
-  sector            String
-  stage             String
-  investmentAmount  Float
-  currency          String            @default("USD")
-  investmentType    InvestmentType
-  investmentDate    DateTime
-  status            InvestmentStatus  @default(ACTIVE)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  founders          Founder[]
-  forecasts         Forecast[]
-  founderUpdates    FounderUpdate[]
-  flags             Flag[]
-  notes             Note[]
+  id                        String              @id @default(uuid())
+  
+  icReference               String              @unique
+  icApprovalDate            DateTime
+  investmentExecutionDate   DateTime
+  dealOwner                 String
+  
+  companyName               String
+  sector                    String
+  geography                 String
+  stage                     InvestmentStage
+  
+  investmentType            InvestmentType
+  committedCapitalLcl       Float
+  deployedCapitalLcl        Float               @default(0)
+  ownershipPercent          Float?
+  coInvestors               String?
+  
+  hasBoardSeat              Boolean             @default(false)
+  hasProRataRights          Boolean             @default(false)
+  hasAntiDilutionProtection Boolean             @default(false)
+  
+  localCurrency             String              @default("USD")
+  investmentFxRate          Float               @default(1.0)
+  investmentFxSource        String?
+  valuationFxRate           Float               @default(1.0)
+  valuationFxSource         String?
+  
+  roundSizeEur              Float?
+  enterpriseValueEur        Float?
+  currentFairValueEur       Float
+  
+  raisedFollowOnCapital     Boolean             @default(false)
+  clearProductMarketFit     Boolean             @default(false)
+  meaningfulRevenue         Boolean             @default(false)
+  
+  status                    InvestmentStatus    @default(ACTIVE)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  
+  founders                  Founder[]
+  forecasts                 Forecast[]
+  founderUpdates            FounderUpdate[]
+  flags                     Flag[]
+  notes                     Note[]
+  cashflows                 Cashflow[]
+  valuations                Valuation[]
+  documents                 Document[]
+  auditLogs                 AuditLog[]
+  actionsRequired           ActionRequired[]
 }
 
 model Founder {
@@ -149,4 +244,77 @@ model Note {
   authorUserId   String
   body           String
   createdAt      DateTime    @default(now())
+}
+
+model Cashflow {
+  id              String        @id @default(uuid())
+  investmentId    String
+  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type            CashflowType
+  amountLcl       Float?
+  amountEur       Float
+  date            DateTime
+  description     String?
+  createdAt       DateTime      @default(now())
+}
+
+model Valuation {
+  id              String        @id @default(uuid())
+  investmentId    String
+  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  fairValueEur    Float
+  valuationDate   DateTime
+  rationale       String
+  changedBy       String
+  createdAt       DateTime      @default(now())
+}
+
+model Document {
+  id              String              @id @default(uuid())
+  investmentId    String
+  investment      Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type            DocumentType
+  versionType     DocumentVersionType
+  filePath        String
+  fileName        String
+  fileSize        Int
+  uploadedBy      String
+  isCurrent       Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+}
+
+model AuditLog {
+  id              String          @id @default(uuid())
+  investmentId    String
+  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  actionRequiredId String?
+  actionRequired  ActionRequired? @relation(fields: [actionRequiredId], references: [id], onDelete: SetNull)
+  action          AuditAction
+  fieldName       String?
+  oldValue        String?
+  newValue        String?
+  rationale       String?
+  changedBy       String
+  createdAt       DateTime        @default(now())
+}
+
+model ActionRequired {
+  id                    String        @id @default(uuid())
+  investmentId          String
+  investment            Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type                  ActionType
+  actionOwner           String
+  reviewDate            DateTime
+  notes                 String
+  status                ActionStatus  @default(PENDING)
+  exitType              ExitType?
+  indicativeValuationMin Float?
+  indicativeValuationMax Float?
+  knownAcquirers        String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  clearedAt             DateTime?
+  clearedBy             String?
+  clearRationale        String?
+  auditLogs             AuditLog[]
 }

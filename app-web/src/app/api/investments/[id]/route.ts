@@ -1,32 +1,34 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { MetricType } from '@prisma/client';
+import { InvestmentStage, AuditAction } from '@prisma/client';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params as { id: string };
     const investment = await prisma.investment.findUnique({
       where: { id },
       include: {
         founders: true,
-        forecasts: {
-          include: {
-            metrics: true
-          },
-          orderBy: { version: 'desc' },
-          take: 1
+        cashflows: {
+          orderBy: { date: 'asc' }
         },
-        founderUpdates: {
-          orderBy: { quarterIndex: 'asc' }
+        valuations: {
+          orderBy: { createdAt: 'desc' }
+        },
+        documents: {
+          orderBy: { createdAt: 'desc' }
+        },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' }
         },
         flags: {
           orderBy: { createdAt: 'desc' }
         },
-        notes: {
-          orderBy: { createdAt: 'desc' }
+        founderUpdates: {
+          orderBy: { quarterIndex: 'asc' }
         }
       }
     });
@@ -34,41 +36,6 @@ export async function GET(
     if (!investment) {
       return NextResponse.json({ error: 'Investment not found' }, { status: 404 });
     }
-
-    const forecast = investment.forecasts[0];
-    const forecastMetrics = forecast?.metrics || [];
-
-    const revenueForecast = forecastMetrics
-      .filter(m => m.metric === MetricType.REVENUE)
-      .sort((a, b) => a.quarterIndex - b.quarterIndex);
-    
-    const burnForecast = forecastMetrics
-      .filter(m => m.metric === MetricType.BURN)
-      .sort((a, b) => a.quarterIndex - b.quarterIndex);
-    
-    const tractionForecast = forecastMetrics
-      .filter(m => m.metric === MetricType.TRACTION)
-      .sort((a, b) => a.quarterIndex - b.quarterIndex);
-
-    const revenueActual = investment.founderUpdates.map(u => ({
-      quarter: u.quarterIndex,
-      value: u.actualRevenue
-    }));
-
-    const burnActual = investment.founderUpdates.map(u => ({
-      quarter: u.quarterIndex,
-      value: u.actualBurn
-    }));
-
-    const tractionActual = investment.founderUpdates.map(u => ({
-      quarter: u.quarterIndex,
-      value: u.actualTraction
-    }));
-
-    const runwayActual = investment.founderUpdates.map(u => ({
-      quarter: u.quarterIndex,
-      value: u.actualRunwayMonths
-    }));
 
     const hasNewFlags = investment.flags.some(f => f.status === 'NEW');
     const hasMonitoringFlags = investment.flags.some(f => f.status === 'MONITORING');
@@ -80,34 +47,145 @@ export async function GET(
       status = 'AMBER';
     }
 
-    return NextResponse.json({
-      investment: {
-        id: investment.id,
-        companyName: investment.companyName,
-        sector: investment.sector,
-        stage: investment.stage,
-        investmentAmount: investment.investmentAmount,
-        investmentDate: investment.investmentDate,
-        status,
-        founders: investment.founders
-      },
+    const investmentWithStatus = {
+      ...investment,
+      status
+    };
+
+    return NextResponse.json({ 
+      investment: investmentWithStatus,
       forecast: {
-        revenue: revenueForecast,
-        burn: burnForecast,
-        traction: tractionForecast
+        revenue: [],
+        burn: [],
+        traction: []
       },
       actuals: {
-        revenue: revenueActual,
-        burn: burnActual,
-        traction: tractionActual,
-        runway: runwayActual
+        revenue: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualRevenue })),
+        burn: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualBurn })),
+        traction: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualTraction })),
+        runway: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualRunwayMonths }))
       },
       updates: investment.founderUpdates,
-      flags: investment.flags,
-      notes: investment.notes
+      flags: investment.flags
     });
   } catch (error) {
     console.error('Error fetching investment:', error);
     return NextResponse.json({ error: 'Failed to fetch investment' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const existingInvestment = await prisma.investment.findUnique({
+      where: { id },
+      select: { currentFairValueEur: true }
+    });
+
+    if (!existingInvestment) {
+      return NextResponse.json({ error: 'Investment not found' }, { status: 404 });
+    }
+
+    const {
+      icApprovalDate,
+      investmentExecutionDate,
+      dealOwner,
+      companyName,
+      sector,
+      geography,
+      stage,
+      investmentType,
+      committedCapitalLcl,
+      deployedCapitalLcl,
+      ownershipPercent,
+      coInvestors,
+      hasBoardSeat,
+      hasProRataRights,
+      hasAntiDilutionProtection,
+      localCurrency,
+      investmentFxRate,
+      investmentFxSource,
+      valuationFxRate,
+      valuationFxSource,
+      roundSizeEur,
+      enterpriseValueEur,
+      currentFairValueEur,
+      raisedFollowOnCapital,
+      clearProductMarketFit,
+      meaningfulRevenue
+    } = body;
+
+    const valuationChanged = existingInvestment.currentFairValueEur !== currentFairValueEur;
+
+    const investment = await prisma.investment.update({
+      where: { id },
+      data: {
+        icApprovalDate: new Date(icApprovalDate),
+        investmentExecutionDate: new Date(investmentExecutionDate),
+        dealOwner,
+        companyName,
+        sector,
+        geography,
+        stage: stage as InvestmentStage,
+        investmentType,
+        committedCapitalLcl,
+        deployedCapitalLcl,
+        ownershipPercent,
+        coInvestors,
+        hasBoardSeat,
+        hasProRataRights,
+        hasAntiDilutionProtection,
+        localCurrency,
+        investmentFxRate,
+        investmentFxSource,
+        valuationFxRate,
+        valuationFxSource,
+        roundSizeEur,
+        enterpriseValueEur,
+        currentFairValueEur,
+        raisedFollowOnCapital,
+        clearProductMarketFit,
+        meaningfulRevenue,
+        auditLogs: {
+          create: {
+            action: 'INVESTMENT_UPDATED',
+            changedBy: dealOwner
+          }
+        }
+      }
+    });
+
+    if (valuationChanged) {
+      await prisma.valuation.create({
+        data: {
+          investmentId: id,
+          fairValueEur: currentFairValueEur,
+          valuationDate: new Date(),
+          rationale: 'Manual valuation update',
+          changedBy: dealOwner
+        }
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          investmentId: id,
+          action: 'VALUATION_UPDATE',
+          fieldName: 'currentFairValueEur',
+          oldValue: existingInvestment.currentFairValueEur.toString(),
+          newValue: currentFairValueEur.toString(),
+          changedBy: dealOwner
+        }
+      });
+    }
+
+    return NextResponse.json(investment);
+  } catch (error) {
+    console.error('Error updating investment:', error);
+    return NextResponse.json({ error: 'Failed to update investment' }, { status: 500 });
   }
 }

@@ -1,11 +1,12 @@
-import { PrismaClient, InvestmentType, InvestmentStatus, FlagType, MetricType } from '@prisma/client';
+import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage, FlagType, MetricType, CashflowType } from '@prisma/client';
 import { evaluateFlags } from '../src/lib/flagEngine';
 
 const prisma = new PrismaClient();
 
 const sectors = ['SaaS', 'Fintech', 'Healthcare', 'E-commerce', 'AI/ML', 'ClimateTech', 'EdTech', 'Cybersecurity'];
-const stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B'];
+const stages = [InvestmentStage.PRE_SEED, InvestmentStage.SEED, InvestmentStage.SERIES_A, InvestmentStage.SERIES_B];
 const investmentTypes = [InvestmentType.SAFE, InvestmentType.CLN, InvestmentType.EQUITY];
+const geographies = ['US', 'GB', 'DE', 'FR', 'ES', 'IT', 'NL', 'SE'];
 
 const companyNames = [
   'CloudSync AI', 'PayFlow Pro', 'MediTrack', 'ShopGenius', 'NeuralNet Labs',
@@ -22,23 +23,47 @@ async function main() {
     const sector = sectors[i % sectors.length];
     const stage = stages[i % stages.length];
     const investmentType = investmentTypes[i % investmentTypes.length];
-    const investmentAmount = 500000 + Math.random() * 2000000;
-    const investmentDate = new Date(2024, Math.floor(Math.random() * 12), 1);
+    const geography = geographies[i % geographies.length];
+    const committedCapitalLcl = 500000 + Math.random() * 2000000;
+    const investmentExecutionDate = new Date(2024, Math.floor(Math.random() * 12), 1);
+    const icApprovalDate = new Date(investmentExecutionDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const icReference = String(i + 1).padStart(5, '0');
 
     const investment = await prisma.investment.create({
       data: {
+        icReference,
+        icApprovalDate,
+        investmentExecutionDate,
+        dealOwner: 'PJI',
         companyName,
         sector,
+        geography,
         stage,
-        investmentAmount,
-        currency: 'USD',
         investmentType,
-        investmentDate,
+        committedCapitalLcl,
+        deployedCapitalLcl: committedCapitalLcl,
+        ownershipPercent: investmentType === InvestmentType.EQUITY ? 5 + Math.random() * 15 : null,
+        localCurrency: 'USD',
+        investmentFxRate: 1.08,
+        investmentFxSource: 'ECB',
+        valuationFxRate: 1.08,
+        valuationFxSource: 'ECB',
+        roundSizeEur: committedCapitalLcl * 1.08 * (2 + Math.random()),
+        currentFairValueEur: committedCapitalLcl * 1.08,
         status: InvestmentStatus.ACTIVE,
         founders: {
           create: {
             name: `Founder ${i + 1}`,
             email: `founder${i + 1}@${companyName.toLowerCase().replace(/\s/g, '')}.com`
+          }
+        },
+        cashflows: {
+          create: {
+            type: CashflowType.INITIAL_INVESTMENT,
+            amountLcl: committedCapitalLcl,
+            amountEur: committedCapitalLcl * 1.08,
+            date: investmentExecutionDate,
+            description: 'Initial investment'
           }
         }
       }
@@ -50,7 +75,7 @@ async function main() {
       data: {
         investmentId: investment.id,
         version: 1,
-        startQuarter: investmentDate,
+        startQuarter: investmentExecutionDate,
         horizonQuarters: 8
       }
     });
@@ -109,8 +134,8 @@ async function main() {
         data: {
           investmentId: investment.id,
           quarterIndex: q,
-          dueDate: new Date(investmentDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
-          submittedAt: new Date(investmentDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
+          dueDate: new Date(investmentExecutionDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
+          submittedAt: new Date(investmentExecutionDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
           status: 'SUBMITTED',
           actualRevenue,
           actualBurn,
