@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Investment MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto py-12 px-4">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Simple Investment MVP</h1>
+            <p class="text-gray-600 mb-8">Create investments and analyze documents with ChatGPT</p>
+
+            <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6"></div>
+            <div id="success" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6"></div>
+
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+                        <input type="text" id="companyName" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., TechStartup Inc.">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sector</label>
+                        <input type="text" id="sector" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., SaaS, Fintech">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Stage</label>
+                        <select id="stage" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="PRE_SEED">Pre-Seed</option>
+                            <option value="SEED" selected>Seed</option>
+                            <option value="SERIES_A">Series A</option>
+                            <option value="SERIES_B">Series B</option>
+                            <option value="SERIES_C">Series C+</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Committed Capital (€) *</label>
+                        <input type="number" id="committedCapital" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., 500000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Deal Owner</label>
+                        <input type="text" id="dealOwner" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="e.g., John Doe">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload Documents</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                    <span>Upload files</span>
+                                    <input id="file-upload" type="file" multiple class="sr-only">
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF, DOC, DOCX, TXT up to 10MB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="documents-list" class="hidden">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Uploaded Documents</h3>
+                    <div id="documents-container" class="space-y-2"></div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="analyzeWithChatGPT()" id="analyzeBtn" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        Analyze with ChatGPT
+                    </button>
+                </div>
+            </div>
+
+            <div id="analysis-results" class="hidden mt-8 border-t pt-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">ChatGPT Analysis</h2>
+                <div id="analysis-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let documents = [];
+        const BACKEND_URL = 'https://rogue-portfolio-core-production.up.railway.app';
+
+        document.getElementById('file-upload').addEventListener('change', handleFileUpload);
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            setTimeout(() => successDiv.classList.add('hidden'), 5000);
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function handleFileUpload(e) {
+            const files = e.target.files;
+            if (!files) return;
+
+            for (const file of Array.from(files)) {
+                try {
+                    const content = await fileToBase64(file);
+                    documents.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        fileName: file.name,
+                        fileSize: file.size,
+                        type: file.type,
+                        content: content
+                    });
+                } catch (err) {
+                    showError('Failed to upload file: ' + file.name);
+                }
+            }
+
+            updateDocumentsList();
+            showSuccess(`Uploaded ${files.length} document(s)`);
+        }
+
+        function updateDocumentsList() {
+            const listDiv = document.getElementById('documents-list');
+            const container = document.getElementById('documents-container');
+
+            if (documents.length === 0) {
+                listDiv.classList.add('hidden');
+                return;
+            }
+
+            listDiv.classList.remove('hidden');
+            container.innerHTML = documents.map(doc => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    <div class="flex items-center space-x-3">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">${doc.fileName}</p>
+                            <p class="text-xs text-gray-500">${(doc.fileSize / 1024).toFixed(1)} KB</p>
+                        </div>
+                    </div>
+                    <button onclick="removeDocument('${doc.id}')" class="text-red-600 hover:text-red-800">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeDocument(id) {
+            documents = documents.filter(doc => doc.id !== id);
+            updateDocumentsList();
+        }
+
+        async function analyzeWithChatGPT() {
+            const companyName = document.getElementById('companyName').value;
+            const sector = document.getElementById('sector').value;
+            const stage = document.getElementById('stage').value;
+            const committedCapital = document.getElementById('committedCapital').value;
+
+            if (!companyName || !committedCapital) {
+                showError('Please fill in Company Name and Committed Capital');
+                return;
+            }
+
+            if (documents.length === 0) {
+                showError('Please upload at least one document');
+                return;
+            }
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/review/analyze-direct`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        investmentId: null,
+                        documents: documents.map(doc => ({
+                            fileName: doc.fileName,
+                            type: 'PITCH_DECK',
+                            content: doc.content
+                        })),
+                        investment: {
+                            companyName,
+                            sector,
+                            stage,
+                            committedCapitalLcl: parseFloat(committedCapital) || 0
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to analyze');
+                }
+
+                const result = await response.json();
+                displayAnalysis(result.analysis);
+                showSuccess('Analysis completed!');
+            } catch (err) {
+                showError('Failed to analyze: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze with ChatGPT';
+            }
+        }
+
+        function displayAnalysis(analysis) {
+            const resultsDiv = document.getElementById('analysis-results');
+            const contentDiv = document.getElementById('analysis-content');
+
+            resultsDiv.classList.remove('hidden');
+
+            contentDiv.innerHTML = `
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Summary</h3>
+                        <p class="text-gray-700 bg-gray-50 p-4 rounded-md">${analysis.summary || 'No summary available'}</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Founders</h3>
+                        <div class="space-y-2">
+                            ${(analysis.founders || []).map(founder => `
+                                <div class="bg-gray-50 p-3 rounded-md">
+                                    <p class="font-medium">${founder.name || 'Unknown'}</p>
+                                    <p class="text-sm text-gray-600">${founder.email || 'No email'}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">Key Metrics</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-blue-50 p-4 rounded-md">
+                                <p class="text-sm text-gray-600">Revenue</p>
+                                <p class="text-xl font-bold text-blue-600">€${(analysis.metrics?.revenue || 0).toLocaleString()}</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-md">
+                                <p class="text-sm text-gray-600">Growth</p>
+                                <p class="text-xl font-bold text-green-600">${analysis.metrics?.growth || 0}%</p>
+                            </div>
+                            <div class="bg-yellow-50 p-4 rounded-md">
+                                <p class="text-sm text-gray-600">Burn</p>
+                                <p class="text-xl font-bold text-yellow-600">€${(analysis.metrics?.burn || 0).toLocaleString()}</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-md">
+                                <p class="text-sm text-gray-600">Runway</p>
+                                <p class="text-xl font-bold text-purple-600">${analysis.metrics?.runway || 0} months</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Risks</h3>
+                            <ul class="space-y-2">
+                                ${(analysis.risks || []).map(risk => `
+                                    <li class="flex items-start">
+                                        <span class="text-red-500 mr-2">⚠️</span>
+                                        <span class="text-gray-700">${risk}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Opportunities</h3>
+                            <ul class="space-y-2">
+                                ${(analysis.opportunities || []).map(opp => `
+                                    <li class="flex items-start">
+                                        <span class="text-green-500 mr-2">✓</span>
+                                        <span class="text-gray-700">${opp}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
