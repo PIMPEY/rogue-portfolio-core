@@ -8,19 +8,12 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const RAILWAY_ENVIRONMENT = process.env.RAILWAY_ENVIRONMENT_NAME || 'unknown';
 
 app.use(cors());
 app.use(express.json());
 
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: NODE_ENV,
-    railwayEnvironment: RAILWAY_ENVIRONMENT
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/portfolio', asyncHandler(async (req, res) => {

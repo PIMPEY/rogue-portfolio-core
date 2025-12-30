@@ -5,8 +5,7 @@ export async function GET() {
     return NextResponse.json({ 
       status: 'ok',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      railwayEnvironment: process.env.RAILWAY_ENVIRONMENT_NAME
+      environment: process.env.NODE_ENV
     });
   } catch (error) {
     return NextResponse.json(
