@@ -345,6 +345,12 @@ export default function PortfolioDashboard() {
             </div>
             <div className="flex gap-3">
               <Link
+                href="/simple-mvp"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                Simple MVP (No AWS)
+              </Link>
+              <Link
                 href="/investments/create"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >

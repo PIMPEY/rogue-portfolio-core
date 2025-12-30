@@ -10,6 +10,8 @@ import { handler as presignedUrlHandler } from './api/documents/presigned-url/ro
 import { handler as uploadCompleteHandler } from './api/documents/upload-complete/route';
 import { handler as startReviewHandler } from './api/review/start/route';
 import { handler as reviewJobHandler } from './api/review/[id]/route';
+import { handler as analyzeHandler } from './api/review/analyze/route';
+import { handler as analyzeDirectHandler } from './api/review/analyze-direct/route';
 
 dotenv.config();
 
@@ -28,6 +30,8 @@ app.post('/api/documents/upload-complete', asyncHandler(uploadCompleteHandler));
 app.post('/api/review/start', asyncHandler(startReviewHandler));
 app.get('/api/review/:id', asyncHandler(reviewJobHandler));
 app.post('/api/review/:id', asyncHandler(reviewJobHandler));
+app.post('/api/review/analyze', asyncHandler(analyzeHandler));
+app.post('/api/review/analyze-direct', asyncHandler(analyzeDirectHandler));
 
 app.get('/api/portfolio', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({
@@ -305,6 +309,14 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
+  console.log(`Server address: http://localhost:${PORT}`);
+});
+
+server.on('error', (err: any) => {
+  console.error('Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
 });
