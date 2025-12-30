@@ -70,21 +70,27 @@
             try {
                 // Clear localStorage to force fresh load from Railway
                 localStorage.removeItem('rogue_investments');
+                console.log('Cleared localStorage, fetching from Railway...');
 
                 // Fetch from Railway
                 const response = await fetch(`${BACKEND_URL}/api/portfolio`);
+                console.log('Response status:', response.status);
+
                 if (!response.ok) {
-                    throw new Error(`Backend returned ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Backend returned ${response.status}: ${errorText}`);
                 }
 
                 const data = await response.json();
+                console.log('Received data:', data.length, 'investments');
 
                 if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format');
+                    throw new Error('Invalid data format: expected array');
                 }
 
                 // Save to localStorage
                 localStorage.setItem('rogue_investments', JSON.stringify(data));
+                console.log('Saved to localStorage');
 
                 // Show success
                 document.getElementById('loading').classList.add('hidden');
