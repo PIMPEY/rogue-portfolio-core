@@ -2,7 +2,6 @@
   "name": "rogue-portfolio-core",
   "version": "1.0.0",
   "description": "Internal portfolio tracking platform that captures investment forecasts, compares forecast vs actual performance, surfaces risk via deterministic flags, and enforces investor action\r # Project Rogue",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,7 +12,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/PIMPEY/rogue-portfolio-core/issues"
   },
