@@ -11,9 +11,9 @@ cd app-web
 echo "Installing dependencies..."
 npm ci
 
-# Generate Prisma Client
+# Generate Prisma Client with Railway schema
 echo "Generating Prisma Client..."
-npx prisma generate
+npx prisma generate --schema=prisma/schema.prisma.railway
 
 # Build Next.js app
 echo "Building Next.js app..."
