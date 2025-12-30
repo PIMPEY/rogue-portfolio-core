@@ -1,0 +1,51 @@
+import { Request, Response, NextFunction } from 'express';
+
+export interface AppError extends Error {
+  statusCode?: number;
+  isOperational?: boolean;
+}
+
+export const errorHandler = (
+  err: AppError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const statusCode = err.statusCode || 500;
+  const isOperational = err.isOperational || false;
+
+  // Log error details
+  console.error('Error:', {
+    message: err.message,
+    statusCode,
+    path: req.path,
+    method: req.method,
+    isOperational,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
+
+  // Send structured error response
+  res.status(statusCode).json({
+    error: {
+      message: err.message || 'Internal server error',
+      statusCode,
+      path: req.path,
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+export const notFoundHandler = (req: Request, res: Response) => {
+  res.status(404).json({
+    error: {
+      message: 'Route not found',
+      statusCode: 404,
+      path: req.path,
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+export const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};

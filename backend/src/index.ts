@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
+import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -15,110 +16,91 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/portfolio', async (req, res) => {
-  try {
-    const investments = await prisma.investment.findMany({
-      include: {
-        founders: true,
-        cashflows: true,
-        valuations: true,
-        flags: true,
+app.get('/api/portfolio', asyncHandler(async (req, res) => {
+  const investments = await prisma.investment.findMany({
+    include: {
+      founders: true,
+      cashflows: true,
+      valuations: true,
+      flags: true,
+    },
+  });
+  res.json(investments);
+}));
+
+app.get('/api/investments', asyncHandler(async (req, res) => {
+  const investments = await prisma.investment.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(investments);
+}));
+
+app.get('/api/investments/:id', asyncHandler(async (req, res) => {
+  const investment = await prisma.investment.findUnique({
+    where: { id: req.params.id },
+    include: {
+      founders: true,
+      cashflows: true,
+      valuations: true,
+      flags: true,
+      documents: true,
+      notes: true,
+      forecasts: {
+        include: { metrics: true },
       },
-    });
-    res.json(investments);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch portfolio' });
+      founderUpdates: true,
+      actionsRequired: true,
+      auditLogs: true,
+    },
+  });
+  if (!investment) {
+    const error = new Error('Investment not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
   }
-});
+  res.json(investment);
+}));
 
-app.get('/api/investments', async (req, res) => {
-  try {
-    const investments = await prisma.investment.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(investments);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch investments' });
-  }
-});
+app.post('/api/investments', asyncHandler(async (req, res) => {
+  const investment = await prisma.investment.create({
+    data: req.body,
+  });
+  res.status(201).json(investment);
+}));
 
-app.get('/api/investments/:id', async (req, res) => {
-  try {
-    const investment = await prisma.investment.findUnique({
-      where: { id: req.params.id },
-      include: {
-        founders: true,
-        cashflows: true,
-        valuations: true,
-        flags: true,
-        documents: true,
-        notes: true,
-        forecasts: {
-          include: { metrics: true },
-        },
-        founderUpdates: true,
-        actionsRequired: true,
-        auditLogs: true,
-      },
-    });
-    if (!investment) {
-      return res.status(404).json({ error: 'Investment not found' });
-    }
-    res.json(investment);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch investment' });
-  }
-});
+app.put('/api/investments/:id', asyncHandler(async (req, res) => {
+  const investment = await prisma.investment.update({
+    where: { id: req.params.id },
+    data: req.body,
+  });
+  res.json(investment);
+}));
 
-app.post('/api/investments', async (req, res) => {
-  try {
-    const investment = await prisma.investment.create({
-      data: req.body,
-    });
-    res.status(201).json(investment);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create investment' });
-  }
-});
+app.get('/api/actions', asyncHandler(async (req, res) => {
+  const actions = await prisma.actionRequired.findMany({
+    include: { investment: true },
+    orderBy: { reviewDate: 'asc' },
+  });
+  res.json(actions);
+}));
 
-app.put('/api/investments/:id', async (req, res) => {
-  try {
-    const investment = await prisma.investment.update({
-      where: { id: req.params.id },
-      data: req.body,
-    });
-    res.json(investment);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update investment' });
+app.get('/api/actions/:id', asyncHandler(async (req, res) => {
+  const action = await prisma.actionRequired.findUnique({
+    where: { id: req.params.id },
+    include: { investment: true },
+  });
+  if (!action) {
+    const error = new Error('Action not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
   }
-});
+  res.json(action);
+}));
 
-app.get('/api/actions', async (req, res) => {
-  try {
-    const actions = await prisma.actionRequired.findMany({
-      include: { investment: true },
-      orderBy: { reviewDate: 'asc' },
-    });
-    res.json(actions);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch actions' });
-  }
-});
-
-app.get('/api/actions/:id', async (req, res) => {
-  try {
-    const action = await prisma.actionRequired.findUnique({
-      where: { id: req.params.id },
-      include: { investment: true },
-    });
-    if (!action) {
-      return res.status(404).json({ error: 'Action not found' });
-    }
-    res.json(action);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch action' });
-  }
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
