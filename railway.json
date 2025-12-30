@@ -6,7 +6,7 @@
     "watchPatterns": ["app-web/**"]
   },
   "deploy": {
-    "startCommand": "cd app-web && npx prisma migrate deploy && node_modules/.bin/next start -p $PORT",
+    "startCommand": "cd app-web && npm run start",
     "healthcheckPath": "/api/health"
   }
 }

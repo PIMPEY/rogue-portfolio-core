@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20"]
 cmds = ["cd app-web && npm install", "cd app-web && npx prisma generate", "cd app-web && npm run build"]
 
 [start]
-cmd = "cd app-web && npx prisma migrate deploy && node_modules/.bin/next start -p $PORT"
+cmd = "cd app-web && npm run start"
 
 [variables]
 NODE_ENV = "production"

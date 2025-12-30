@@ -52,7 +52,12 @@ cp prisma/schema.prisma.railway prisma/schema.prisma
 
 ### 5. Run Migrations
 
-Railway will automatically run migrations on deployment. The `railway.json` config handles this.
+Railway automatically runs migrations at startup (not during build). The `package.json` start script handles this:
+```json
+"start": "prisma migrate deploy && next start -p $PORT"
+```
+
+This ensures migrations run when DATABASE_URL is available at runtime.
 
 ### 6. Seed Database (Optional)
 
