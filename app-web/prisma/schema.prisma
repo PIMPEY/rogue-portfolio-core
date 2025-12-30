@@ -279,6 +279,8 @@ model Document {
   fileSize        Int
   uploadedAt      DateTime            @default(now())
   uploadedBy      String
+  isCurrent       Boolean             @default(true)
+  createdAt       DateTime            @default(now())
 }
 
 model AuditLog {
