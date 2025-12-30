@@ -154,6 +154,22 @@
         });
 
         async function loadInvestment(id) {
+            // First, try to load from localStorage
+            const stored = localStorage.getItem('rogue_investments');
+            if (stored) {
+                try {
+                    const investments = JSON.parse(stored);
+                    investment = investments.find(inv => inv.id === id);
+                    if (investment) {
+                        renderInvestment();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                }
+            }
+
+            // If not in localStorage, try backend
             try {
                 const response = await fetch(`${BACKEND_URL}/api/investments/${id}`);
                 if (response.ok) {

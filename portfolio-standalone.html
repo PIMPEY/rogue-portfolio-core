@@ -23,6 +23,13 @@
                     <a href="companies-standalone.html" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                         View Companies
                     </a>
+                    <button onclick="document.getElementById('importFile').click()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Import JSON
+                    </button>
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importJSON(event)">
+                    <button onclick="exportJSON()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Export JSON
+                    </button>
                 </div>
             </div>
         </div>
@@ -118,10 +125,26 @@
         document.addEventListener('DOMContentLoaded', loadInvestments);
 
         async function loadInvestments() {
+            // First, try to load from localStorage
+            const stored = localStorage.getItem('rogue_investments');
+            if (stored) {
+                try {
+                    allInvestments = JSON.parse(stored);
+                    renderInvestments();
+                    updateStats();
+                    renderCharts();
+                    return;
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                }
+            }
+
+            // If no localStorage data, try backend
             try {
                 const response = await fetch(`${BACKEND_URL}/api/portfolio`);
                 if (response.ok) {
                     allInvestments = await response.json();
+                    localStorage.setItem('rogue_investments', JSON.stringify(allInvestments));
                     renderInvestments();
                     updateStats();
                     renderCharts();
@@ -290,6 +313,43 @@
             document.getElementById('greenCount').textContent = '0';
             document.getElementById('amberCount').textContent = '0';
             document.getElementById('redCount').textContent = '0';
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) {
+                        allInvestments = data;
+                        localStorage.setItem('rogue_investments', JSON.stringify(data));
+                        renderInvestments();
+                        updateStats();
+                        renderCharts();
+                        alert(`Successfully imported ${data.length} investments!`);
+                    } else {
+                        alert('Invalid JSON format. Expected an array of investments.');
+                    }
+                } catch (error) {
+                    alert('Error parsing JSON file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportJSON() {
+            const data = JSON.stringify(allInvestments, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'portfolio-export.json';
+            a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>

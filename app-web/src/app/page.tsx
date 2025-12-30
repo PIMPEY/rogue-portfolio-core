@@ -270,6 +270,17 @@ export default function PortfolioDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const exportToJSON = () => {
+    const jsonContent = JSON.stringify(investments, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'portfolio-export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getCellValue = (inv: Investment, columnKey: ColumnKey): React.ReactNode => {
     if (columnKey === 'founderNames') {
       return inv.founders.map(f => f.name).join(', ');
@@ -417,6 +428,12 @@ export default function PortfolioDashboard() {
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 Export CSV
+              </button>
+              <button
+                onClick={exportToJSON}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              >
+                Export JSON
               </button>
             </div>
           </div>
