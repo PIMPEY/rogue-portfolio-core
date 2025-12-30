@@ -4,10 +4,6 @@ set -e
 
 echo "Starting Railway build..."
 
-# Install dependencies
-echo "Installing dependencies..."
-npm install --legacy-peer-deps
-
 # Generate Prisma Client
 echo "Generating Prisma Client..."
 npx prisma generate
