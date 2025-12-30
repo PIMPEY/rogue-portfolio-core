@@ -99,7 +99,7 @@ Open `app-web/mvp-demo.html` directly in your browser (bypasses server)
 - ✅ Step 6: Audit Log for Material Changes - Comprehensive audit logging
 
 **Phase 3: Environment Safety (1 step)**
-- ⏳ Step 7: Seeding Discipline - Pending
+- ✅ Step 7: Seeding Discipline - Production seeding blocked
 
 ### 🔐 Security Features
 
@@ -125,10 +125,15 @@ Open `app-web/mvp-demo.html` directly in your browser (bypasses server)
 - PUT /api/actions/:id
 - POST /api/actions/:id/clear
 
+**Seeding Discipline**
+- Database seeding blocked in production environment
+- Checks NODE_ENV and RAILWAY_ENVIRONMENT_NAME
+- Exits with error if seeding attempted in production
+- Seeding only allowed in development/staging
+
 See `backend/AUTH_SETUP.md` for setup instructions.
 
 ## Next Steps
 1. ⏭️ Generate and set API_TOKEN in Railway (manual action required)
-2. ⏭️ Implement Step 7: Seeding Discipline
-3. ⏭️ Add monitoring and observability
-4. ⏭️ Implement missing MVP features (founder updates, forecast entry, notes)
+2. ⏭️ Add monitoring and observability
+3. ⏭️ Implement missing MVP features (founder updates, forecast entry, notes)
