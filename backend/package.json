@@ -5,12 +5,12 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "prisma migrate deploy --schema=prisma/schema.prisma || echo 'Migration failed, continuing...' && node dist/index.js",
+    "start": "prisma migrate deploy --schema=prisma/schema.prisma.railway || echo 'Migration failed, continuing...' && node dist/index.js",
     "migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
     "generate": "prisma generate --schema=prisma/schema.prisma",
     "seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate --schema=prisma/schema.prisma"
+    "postinstall": "prisma generate --schema=prisma/schema.prisma.railway"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

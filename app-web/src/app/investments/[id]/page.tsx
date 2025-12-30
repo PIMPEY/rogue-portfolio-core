@@ -40,7 +40,7 @@ interface Investment {
   raisedFollowOnCapital: boolean;
   clearProductMarketFit: boolean;
   meaningfulRevenue: boolean;
-  status: 'GREEN' | 'AMBER' | 'RED';
+  status: 'PENDING_REVIEW' | 'ACTIVE' | 'EXITED' | 'WRITTEN_OFF';
   founders: Array<{ name: string; email: string }>;
 }
 
@@ -138,9 +138,10 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'GREEN': return 'bg-green-500';
-      case 'AMBER': return 'bg-yellow-500';
-      case 'RED': return 'bg-red-500';
+      case 'ACTIVE': return 'bg-green-500';
+      case 'PENDING_REVIEW': return 'bg-yellow-500';
+      case 'EXITED': return 'bg-blue-500';
+      case 'WRITTEN_OFF': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
@@ -212,6 +213,14 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {investment.status === 'PENDING_REVIEW' && (
+                <Link
+                  href={`/investments/${id}/verify`}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                >
+                  Verify & Activate
+                </Link>
+              )}
               <Link
                 href={`/investments/${id}/edit`}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
@@ -220,7 +229,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
               </Link>
               <div className="flex items-center">
                 <span className={`h-3 w-3 rounded-full ${getStatusColor(investment.status)} mr-2`} />
-                <span className="text-lg font-semibold text-gray-900">{investment.status}</span>
+                <span className="text-lg font-semibold text-gray-900">{investment.status.replace('_', ' ')}</span>
               </div>
             </div>
           </div>

@@ -40,15 +40,11 @@ export default function CreateInvestment() {
     founderEmail: ''
   });
 
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+
   const sectors = ['SaaS', 'Fintech', 'Healthcare', 'E-commerce', 'AI/ML', 'ClimateTech', 'EdTech', 'Cybersecurity', 'Other'];
   const geographies = ['US', 'GB', 'DE', 'FR', 'ES', 'IT', 'NL', 'SE', 'CH', 'IE', 'Other'];
-  const currencies = ['USD', 'EUR', 'GBP', 'CHF'];
-
-  const calculateInvestmentEur = () => {
-    const capital = parseFloat(formData.committedCapitalLcl) || 0;
-    const fxRate = parseFloat(formData.investmentFxRate) || 1;
-    return (capital / fxRate).toFixed(2);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,22 +52,29 @@ export default function CreateInvestment() {
     setError('');
 
     try {
-      const response = await fetch('/api/investments', {
+      const formDataPayload = new FormData();
+      formDataPayload.append('investment', JSON.stringify({
+        ...formData,
+        status: 'PENDING_REVIEW',
+        committedCapitalLcl: parseFloat(formData.committedCapitalLcl),
+        deployedCapitalLcl: parseFloat(formData.deployedCapitalLcl),
+        ownershipPercent: formData.ownershipPercent ? parseFloat(formData.ownershipPercent) : null,
+        investmentFxRate: parseFloat(formData.investmentFxRate),
+        valuationFxRate: parseFloat(formData.valuationFxRate),
+        roundSizeEur: formData.roundSizeEur ? parseFloat(formData.roundSizeEur) : null,
+        enterpriseValueEur: formData.enterpriseValueEur ? parseFloat(formData.enterpriseValueEur) : null,
+        currentFairValueEur: parseFloat(formData.currentFairValueEur),
+        icApprovalDate: new Date(formData.icApprovalDate).toISOString(),
+        investmentExecutionDate: new Date(formData.investmentExecutionDate).toISOString()
+      }));
+
+      files.forEach(file => {
+        formDataPayload.append('files', file);
+      });
+
+      const response = await fetch('/api/investments/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          committedCapitalLcl: parseFloat(formData.committedCapitalLcl),
-          deployedCapitalLcl: parseFloat(formData.deployedCapitalLcl),
-          ownershipPercent: formData.ownershipPercent ? parseFloat(formData.ownershipPercent) : null,
-          investmentFxRate: parseFloat(formData.investmentFxRate),
-          valuationFxRate: parseFloat(formData.valuationFxRate),
-          roundSizeEur: formData.roundSizeEur ? parseFloat(formData.roundSizeEur) : null,
-          enterpriseValueEur: formData.enterpriseValueEur ? parseFloat(formData.enterpriseValueEur) : null,
-          currentFairValueEur: parseFloat(formData.currentFairValueEur),
-          icApprovalDate: new Date(formData.icApprovalDate).toISOString(),
-          investmentExecutionDate: new Date(formData.investmentExecutionDate).toISOString()
-        })
+        body: formDataPayload
       });
 
       if (!response.ok) {
@@ -296,165 +299,52 @@ export default function CreateInvestment() {
           </div>
 
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Section D — Currency & FX</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Local Currency *</label>
-                <select
-                  required
-                  value={formData.localCurrency}
-                  onChange={(e) => setFormData({ ...formData, localCurrency: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                >
-                  {currencies.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Investment Amount (€)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`€${calculateInvestmentEur()}`}
-                  className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Investment FX Rate *</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  required
-                  value={formData.investmentFxRate}
-                  onChange={(e) => setFormData({ ...formData, investmentFxRate: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Investment FX Source</label>
-                <input
-                  type="text"
-                  value={formData.investmentFxSource}
-                  onChange={(e) => setFormData({ ...formData, investmentFxSource: e.target.value })}
-                  placeholder="e.g., ECB"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Valuation FX Rate *</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  required
-                  value={formData.valuationFxRate}
-                  onChange={(e) => setFormData({ ...formData, valuationFxRate: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Valuation FX Source</label>
-                <input
-                  type="text"
-                  value={formData.valuationFxSource}
-                  onChange={(e) => setFormData({ ...formData, valuationFxSource: e.target.value })}
-                  placeholder="e.g., ECB"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Document Upload</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload investment documents (IC memo, pitch deck, term sheet). An agent will extract the remaining data in the background.
+            </p>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <input
+                type="file"
+                id="documents"
+                multiple
+                accept=".pdf,.doc,.docx,.ppt,.pptx"
+                onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                className="hidden"
+              />
+              <label
+                htmlFor="documents"
+                className="flex flex-col items-center justify-center cursor-pointer"
+              >
+                <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="text-sm text-gray-600">Click to upload or drag and drop</span>
+                <span className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, PPT, PPTX (max 3MB each)</span>
+              </label>
+              {files.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                      <span className="text-gray-700">{file.name}</span>
+                      <span className="text-gray-500">{(file.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Section E — Valuation & Returns</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Round Size (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.roundSizeEur}
-                  onChange={(e) => setFormData({ ...formData, roundSizeEur: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Enterprise Value (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.enterpriseValueEur}
-                  onChange={(e) => setFormData({ ...formData, enterpriseValueEur: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Current Fair Value (€) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.currentFairValueEur}
-                  onChange={(e) => setFormData({ ...formData, currentFairValueEur: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Section F — Qualitative Status Markers</h2>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.raisedFollowOnCapital}
-                  onChange={(e) => setFormData({ ...formData, raisedFollowOnCapital: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Raised follow-on capital</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.clearProductMarketFit}
-                  onChange={(e) => setFormData({ ...formData, clearProductMarketFit: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Clear Product-Market Fit</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.meaningfulRevenue}
-                  onChange={(e) => setFormData({ ...formData, meaningfulRevenue: e.target.checked })}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Meaningful revenue (≥ €500k ARR)</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Founder Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Founder Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.founderName}
-                  onChange={(e) => setFormData({ ...formData, founderName: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Founder Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.founderEmail}
-                  onChange={(e) => setFormData({ ...formData, founderEmail: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                />
+                <h3 className="text-sm font-medium text-blue-900">What happens next?</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  After submission, an agent will review your documents and populate the remaining fields (FX rates, valuations, founder info, etc.). You'll be able to verify and confirm all data before the investment becomes active.
+                </p>
               </div>
             </div>
           </div>
@@ -468,10 +358,10 @@ export default function CreateInvestment() {
             </Link>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
             >
-              {loading ? 'Creating...' : 'Create Investment'}
+              {uploading ? 'Uploading documents...' : loading ? 'Creating...' : 'Create Investment'}
             </button>
           </div>
         </form>

@@ -15,6 +15,7 @@ enum InvestmentType {
 }
 
 enum InvestmentStatus {
+  PENDING_REVIEW
   ACTIVE
   EXITED
   WRITTEN_OFF

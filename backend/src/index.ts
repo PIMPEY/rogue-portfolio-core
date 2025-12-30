@@ -70,7 +70,10 @@ app.post('/api/investments', authenticate, requireChangeRationale, asyncHandler(
   const changedBy = req.user?.name || 'Unknown';
 
   const investment = await prisma.investment.create({
-    data: req.body,
+    data: {
+      ...req.body,
+      icReference: req.body.icReference || `IC-${Date.now()}`,
+    },
   });
 
   await prisma.auditLog.create({
@@ -83,6 +86,45 @@ app.post('/api/investments', authenticate, requireChangeRationale, asyncHandler(
   });
 
   res.status(201).json(investment);
+}));
+
+app.post('/api/investments/create', asyncHandler(async (req, res) => {
+  const { investment, files } = req.body;
+
+  const createdInvestment = await prisma.investment.create({
+    data: {
+      ...investment,
+      icReference: investment.icReference || `IC-${Date.now()}`,
+    },
+  });
+
+  if (files && files.length > 0) {
+    for (const file of files) {
+      await prisma.document.create({
+        data: {
+          investmentId: createdInvestment.id,
+          type: 'IC_MEMO',
+          versionType: 'INITIAL',
+          filePath: file.filePath,
+          fileName: file.fileName,
+          fileSize: file.fileSize,
+          uploadedBy: investment.dealOwner,
+          isCurrent: true
+        }
+      });
+    }
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      investmentId: createdInvestment.id,
+      action: 'INVESTMENT_CREATED',
+      rationale: 'Investment created with document upload',
+      changedBy: investment.dealOwner || 'Unknown',
+    },
+  });
+
+  res.status(201).json(createdInvestment);
 }));
 
 app.put('/api/investments/:id', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
