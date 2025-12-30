@@ -7,6 +7,10 @@ echo "Starting Railway build..."
 
 cd app-web
 
+# Install dependencies first
+echo "Installing dependencies..."
+npm ci
+
 # Generate Prisma Client
 echo "Generating Prisma Client..."
 npx prisma generate

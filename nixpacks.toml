@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.build]
-cmds = ["cd app-web && npm install", "cd app-web && npx prisma generate", "cd app-web && npm run build"]
+cmds = ["cd app-web && npm ci", "cd app-web && npx prisma generate", "cd app-web && npm run build"]
 
 [start]
 cmd = "cd app-web && npm run start"
