@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Dashboard - Project Rogue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Portfolio Dashboard</h1>
+                    <p class="mt-2 text-gray-600">Track investment performance and identify risks</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="simple-mvp-standalone.html" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                        Create Investment
+                    </a>
+                    <a href="companies-standalone.html" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        View Companies
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Total Investments</div>
+                <div class="mt-2 text-3xl font-bold text-gray-900" id="totalInvestments">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">On Track</div>
+                <div class="mt-2 text-3xl font-bold text-green-600" id="greenCount">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Needs Attention</div>
+                <div class="mt-2 text-3xl font-bold text-yellow-600" id="amberCount">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500">Critical</div>
+                <div class="mt-2 text-3xl font-bold text-red-600" id="redCount">0</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Investments by Sector</h3>
+                <canvas id="sectorChart"></canvas>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Investments by Stage</h3>
+                <canvas id="stageChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Investments Table -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-medium text-gray-900">Investments</h2>
+                    <div class="flex space-x-2">
+                        <button onclick="filterInvestments('ALL')" class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-900 text-white" data-filter="ALL">ALL</button>
+                        <button onclick="filterInvestments('GREEN')" class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-filter="GREEN">GREEN</button>
+                        <button onclick="filterInvestments('AMBER')" class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-filter="AMBER">AMBER</button>
+                        <button onclick="filterInvestments('RED')" class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-filter="RED">RED</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Committed (€)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Value (€)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MOIC</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="investmentsTable">
+                        <!-- Investments will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden bg-white rounded-lg shadow p-12 text-center">
+            <div class="text-gray-400 mb-4">
+                <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Investments Yet</h3>
+            <p class="text-gray-600 mb-6">Get started by creating your first investment</p>
+            <a href="simple-mvp-standalone.html" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Create Investment
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://rogue-portfolio-core-production.up.railway.app';
+        let allInvestments = [];
+        let currentFilter = 'ALL';
+
+        // Load investments on page load
+        document.addEventListener('DOMContentLoaded', loadInvestments);
+
+        async function loadInvestments() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/portfolio`);
+                if (response.ok) {
+                    allInvestments = await response.json();
+                    renderInvestments();
+                    updateStats();
+                    renderCharts();
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Failed to load investments:', error);
+                showEmptyState();
+            }
+        }
+
+        function renderInvestments() {
+            const table = document.getElementById('investmentsTable');
+            const emptyState = document.getElementById('emptyState');
+            
+            const filtered = filterByStatus(allInvestments, currentFilter);
+            
+            if (filtered.length === 0) {
+                table.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            table.innerHTML = filtered.map(inv => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                        <a href="companies-standalone.html?id=${inv.id}" class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                            ${inv.companyName}
+                        </a>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${inv.sector}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${inv.stage}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(inv.committedCapitalLcl)}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(inv.currentFairValueEur)}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${inv.grossMoic || 'N/A'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                        ${getStatusBadge(inv.status)}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                        <a href="companies-standalone.html?id=${inv.id}" class="text-blue-600 hover:text-blue-900">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterByStatus(investments, status) {
+            if (status === 'ALL') return investments;
+            return investments.filter(inv => inv.status === status);
+        }
+
+        function filterInvestments(status) {
+            currentFilter = status;
+            
+            // Update button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === status) {
+                    btn.classList.remove('bg-gray-100', 'text-gray-700');
+                    btn.classList.add('bg-gray-900', 'text-white');
+                } else {
+                    btn.classList.remove('bg-gray-900', 'text-white');
+                    btn.classList.add('bg-gray-100', 'text-gray-700');
+                }
+            });
+            
+            renderInvestments();
+        }
+
+        function updateStats() {
+            document.getElementById('totalInvestments').textContent = allInvestments.length;
+            document.getElementById('greenCount').textContent = allInvestments.filter(i => i.status === 'GREEN').length;
+            document.getElementById('amberCount').textContent = allInvestments.filter(i => i.status === 'AMBER').length;
+            document.getElementById('redCount').textContent = allInvestments.filter(i => i.status === 'RED').length;
+        }
+
+        function renderCharts() {
+            // Sector Chart
+            const sectors = {};
+            allInvestments.forEach(inv => {
+                sectors[inv.sector] = (sectors[inv.sector] || 0) + 1;
+            });
+            
+            new Chart(document.getElementById('sectorChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sectors),
+                    datasets: [{
+                        data: Object.values(sectors),
+                        backgroundColor: [
+                            '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+                            '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Stage Chart
+            const stages = {};
+            allInvestments.forEach(inv => {
+                stages[inv.stage] = (stages[inv.stage] || 0) + 1;
+            });
+            
+            new Chart(document.getElementById('stageChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(stages),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(stages),
+                        backgroundColor: '#3B82F6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                'GREEN': 'bg-green-100 text-green-800',
+                'AMBER': 'bg-yellow-100 text-yellow-800',
+                'RED': 'bg-red-100 text-red-800'
+            };
+            return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}">${status}</span>`;
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function showEmptyState() {
+            document.getElementById('investmentsTable').innerHTML = '';
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('totalInvestments').textContent = '0';
+            document.getElementById('greenCount').textContent = '0';
+            document.getElementById('amberCount').textContent = '0';
+            document.getElementById('redCount').textContent = '0';
+        }
+    </script>
+</body>
+</html>

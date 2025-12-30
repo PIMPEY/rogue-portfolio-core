@@ -338,32 +338,27 @@ export default function PortfolioDashboard() {
   }
 
   if (error) {
+    // Auto-redirect to Simple MVP after 3 seconds
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        router.push('/simple-mvp');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }, [router]);
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Backend Connection Error</h1>
           <p className="text-gray-600 mb-6">
-            Unable to connect to the backend server. This might be because:
+            Unable to connect to the backend server. Redirecting to Simple MVP...
           </p>
-          <ul className="text-left text-gray-600 mb-6 space-y-2">
-            <li>• The backend is still starting up</li>
-            <li>• The database is not connected</li>
-            <li>• There's a network issue</li>
-          </ul>
-          <div className="space-y-3">
-            <Link
-              href="/simple-mvp"
-              className="block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Use Simple MVP (Works Offline)
-            </Link>
-            <button
-              onClick={() => window.location.reload()}
-              className="block w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-            >
-              Try Again
-            </button>
-          </div>
+          <p className="text-sm text-gray-500">
+            <a href="/simple-mvp" className="text-blue-600 hover:underline">
+              Click here if not redirected
+            </a>
+          </p>
         </div>
       </div>
     );

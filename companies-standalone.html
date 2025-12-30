@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Details - Project Rogue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <a href="portfolio-standalone.html" class="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-block">← Back to Portfolio</a>
+                    <h1 class="text-3xl font-bold text-gray-900" id="companyName">Loading...</h1>
+                    <p class="mt-2 text-gray-600" id="companyDetails">Loading company details...</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="simple-mvp-standalone.html" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                        Create Investment
+                    </a>
+                    <a href="portfolio-standalone.html" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        View Portfolio
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="bg-white rounded-lg shadow p-12 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading company data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden bg-white rounded-lg shadow p-12 text-center">
+            <div class="text-red-400 mb-4">
+                <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Failed to Load Company</h3>
+            <p class="text-gray-600 mb-6">Unable to load company data. It may not exist or there's a connection issue.</p>
+            <a href="portfolio-standalone.html" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Back to Portfolio
+            </a>
+        </div>
+
+        <!-- Company Content -->
+        <div id="companyContent" class="hidden space-y-6">
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="text-sm font-medium text-gray-500">Committed Capital</div>
+                    <div class="mt-2 text-2xl font-bold text-gray-900" id="committedCapital">€0</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="text-sm font-medium text-gray-500">Current Value</div>
+                    <div class="mt-2 text-2xl font-bold text-gray-900" id="currentValue">€0</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="text-sm font-medium text-gray-500">Gross MOIC</div>
+                    <div class="mt-2 text-2xl font-bold text-gray-900" id="grossMoic">0x</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="text-sm font-medium text-gray-500">Status</div>
+                    <div class="mt-2 text-2xl font-bold" id="status">-</div>
+                </div>
+            </div>
+
+            <!-- Actuals vs Forecast Chart -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Revenue: Actuals vs Forecast</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Burn Rate Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Burn Rate: Actuals vs Forecast</h3>
+                    <canvas id="burnChart"></canvas>
+                </div>
+
+                <!-- Traction Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Traction: Actuals vs Forecast</h3>
+                    <canvas id="tractionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Founder Updates Table -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Founder Updates</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quarter</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual Revenue</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Forecast Revenue</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual Burn</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Runway</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="updatesTable">
+                            <!-- Updates will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Flags -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Active Flags</h3>
+                </div>
+                <div id="flagsContainer" class="p-6">
+                    <!-- Flags will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Founders -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Founders</h3>
+                </div>
+                <div id="foundersContainer" class="p-6">
+                    <!-- Founders will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://rogue-portfolio-core-production.up.railway.app';
+        let investment = null;
+
+        // Get investment ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const investmentId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!investmentId) {
+                showError('No investment ID provided');
+                return;
+            }
+            loadInvestment(investmentId);
+        });
+
+        async function loadInvestment(id) {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/investments/${id}`);
+                if (response.ok) {
+                    investment = await response.json();
+                    renderInvestment();
+                } else {
+                    showError('Investment not found');
+                }
+            } catch (error) {
+                console.error('Failed to load investment:', error);
+                showError('Failed to load investment data');
+            }
+        }
+
+        function renderInvestment() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('companyContent').classList.remove('hidden');
+
+            // Header
+            document.getElementById('companyName').textContent = investment.companyName;
+            document.getElementById('companyDetails').textContent = 
+                `${investment.sector} • ${investment.stage} • ${investment.geography}`;
+
+            // Key Metrics
+            document.getElementById('committedCapital').textContent = formatCurrency(investment.committedCapitalLcl);
+            document.getElementById('currentValue').textContent = formatCurrency(investment.currentFairValueEur);
+            document.getElementById('grossMoic').textContent = investment.grossMoic || 'N/A';
+            document.getElementById('status').innerHTML = getStatusBadge(investment.status);
+
+            // Charts
+            renderCharts();
+
+            // Updates Table
+            renderUpdatesTable();
+
+            // Flags
+            renderFlags();
+
+            // Founders
+            renderFounders();
+        }
+
+        function renderCharts() {
+            const updates = investment.founderUpdates || [];
+            const forecasts = investment.forecasts || [];
+            
+            if (updates.length === 0) {
+                document.getElementById('revenueChart').parentElement.innerHTML = 
+                    '<p class="text-gray-500 text-center py-8">No data available</p>';
+                document.getElementById('burnChart').parentElement.innerHTML = 
+                    '<p class="text-gray-500 text-center py-8">No data available</p>';
+                document.getElementById('tractionChart').parentElement.innerHTML = 
+                    '<p class="text-gray-500 text-center py-8">No data available</p>';
+                return;
+            }
+
+            const quarters = updates.map(u => `Q${u.quarterIndex}`);
+            const actualRevenue = updates.map(u => u.actualRevenue);
+            const actualBurn = updates.map(u => u.actualBurn);
+            const actualTraction = updates.map(u => u.actualTraction);
+
+            // Get forecast data
+            let forecastRevenue = [];
+            let forecastBurn = [];
+            let forecastTraction = [];
+
+            if (forecasts.length > 0) {
+                const forecast = forecasts[0];
+                const metrics = forecast.metrics || [];
+                
+                forecastRevenue = metrics
+                    .filter(m => m.metric === 'REVENUE')
+                    .sort((a, b) => a.quarterIndex - b.quarterIndex)
+                    .map(m => m.value);
+                
+                forecastBurn = metrics
+                    .filter(m => m.metric === 'BURN')
+                    .sort((a, b) => a.quarterIndex - b.quarterIndex)
+                    .map(m => m.value);
+                
+                forecastTraction = metrics
+                    .filter(m => m.metric === 'TRACTION')
+                    .sort((a, b) => a.quarterIndex - b.quarterIndex)
+                    .map(m => m.value);
+            }
+
+            // Revenue Chart
+            new Chart(document.getElementById('revenueChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        {
+                            label: 'Actual Revenue',
+                            data: actualRevenue,
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Forecast Revenue',
+                            data: forecastRevenue,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => '€' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Burn Chart
+            new Chart(document.getElementById('burnChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        {
+                            label: 'Actual Burn',
+                            data: actualBurn,
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Forecast Burn',
+                            data: forecastBurn,
+                            borderColor: '#F59E0B',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => '€' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Traction Chart
+            new Chart(document.getElementById('tractionChart'), {
+                type: 'line',
+                data: {
+                    labels: quarters,
+                    datasets: [
+                        {
+                            label: 'Actual Traction',
+                            data: actualTraction,
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Forecast Traction',
+                            data: forecastTraction,
+                            borderColor: '#EC4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderUpdatesTable() {
+            const updates = investment.founderUpdates || [];
+            const forecasts = investment.forecasts || [];
+            const table = document.getElementById('updatesTable');
+
+            if (updates.length === 0) {
+                table.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">No updates available</td></tr>';
+                return;
+            }
+
+            // Get forecast metrics
+            let forecastMetrics = {};
+            if (forecasts.length > 0) {
+                const forecast = forecasts[0];
+                forecast.metrics.forEach(m => {
+                    forecastMetrics[`${m.metric}_${m.quarterIndex}`] = m.value;
+                });
+            }
+
+            table.innerHTML = updates.map(update => {
+                const forecastRevenue = forecastMetrics[`REVENUE_${update.quarterIndex}`] || 0;
+                const variance = forecastRevenue > 0 
+                    ? ((update.actualRevenue - forecastRevenue) / forecastRevenue * 100).toFixed(1)
+                    : 0;
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Q${update.quarterIndex}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(update.actualRevenue)}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(forecastRevenue)}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm">
+                            <span class="${parseFloat(variance) >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                ${variance}%
+                            </span>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(update.actualBurn)}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${update.actualRunwayMonths.toFixed(1)} months</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm">
+                            ${getStatusBadge(update.status)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderFlags() {
+            const flags = investment.flags || [];
+            const container = document.getElementById('flagsContainer');
+
+            if (flags.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No active flags</p>';
+                return;
+            }
+
+            container.innerHTML = flags.map(flag => `
+                <div class="flex items-start p-4 mb-3 bg-gray-50 rounded-md">
+                    <span class="text-2xl mr-3">${getFlagIcon(flag.type)}</span>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-900">${flag.type.replace(/_/g, ' ')}</h4>
+                            <span class="text-xs px-2 py-1 rounded-full ${getFlagStatusColor(flag.status)}">${flag.status}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Threshold: ${flag.threshold}</p>
+                        ${flag.actualValue ? `<p class="text-sm text-gray-600">Actual: ${flag.actualValue.toLocaleString()}</p>` : ''}
+                        ${flag.deltaPct ? `<p class="text-sm ${flag.deltaPct > 0 ? 'text-red-600' : 'text-green-600'}">Variance: ${flag.deltaPct.toFixed(1)}%</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFounders() {
+            const founders = investment.founders || [];
+            const container = document.getElementById('foundersContainer');
+
+            if (founders.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No founders listed</p>';
+                return;
+            }
+
+            container.innerHTML = founders.map(founder => `
+                <div class="flex items-center p-4 mb-3 bg-gray-50 rounded-md">
+                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold mr-4">
+                        ${founder.name.charAt(0)}
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">${founder.name}</h4>
+                        <p class="text-sm text-gray-600">${founder.email}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                'GREEN': 'bg-green-100 text-green-800',
+                'AMBER': 'bg-yellow-100 text-yellow-800',
+                'RED': 'bg-red-100 text-red-800',
+                'SUBMITTED': 'bg-blue-100 text-blue-800',
+                'LATE': 'bg-yellow-100 text-yellow-800',
+                'OVERDUE': 'bg-red-100 text-red-800'
+            };
+            return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}">${status}</span>`;
+        }
+
+        function getFlagIcon(type) {
+            const icons = {
+                'REVENUE_MISS': '💰',
+                'TRACTION_MISS': '📈',
+                'BURN_SPIKE': '🔥',
+                'BURN_CRITICAL': '🚨',
+                'RUNWAY_RISK': '⏰',
+                'RUNWAY_CRITICAL': '⚠️',
+                'LATE_UPDATE': '📅'
+            };
+            return icons[type] || '🏳️';
+        }
+
+        function getFlagStatusColor(status) {
+            const colors = {
+                'NEW': 'bg-red-100 text-red-800',
+                'ACKNOWLEDGED': 'bg-yellow-100 text-yellow-800',
+                'MONITORING': 'bg-blue-100 text-blue-800',
+                'RESOLVED': 'bg-green-100 text-green-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorState').querySelector('p').textContent = message;
+        }
+    </script>
+</body>
+</html>
