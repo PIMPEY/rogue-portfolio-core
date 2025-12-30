@@ -1,8 +1,8 @@
 # Project Rogue - MVP Status
 
-## Current Status: ✅ MVP IS READY
+## Current Status: 🚀 PRODUCTION DEPLOYED + HARDENING IN PROGRESS
 
-The MVP is fully built and functional. The only issue is Windows Firewall blocking localhost access.
+The MVP is fully built, deployed to Railway production, and undergoing investment-grade security hardening.
 
 ## What's Built
 
@@ -78,8 +78,37 @@ Open `app-web/mvp-demo.html` directly in your browser (bypasses server)
 - Notes/investor action tracking
 - Token-based founder authentication
 
+## Production Deployment
+
+### ✅ Railway Production (Live)
+- **Frontend**: https://rogue-portfolio-core-production.up.railway.app
+- **Backend**: https://rogue-portfolio-backend-production.up.railway.app
+- **Database**: PostgreSQL on Railway
+- **Status**: Healthy and operational
+
+### 🔄 Production Hardening (7-Step Process)
+
+**Phase 1: Foundation (3 steps)**
+- ✅ Step 1: Secrets Hygiene - DATABASE_URL removed from frontend
+- ✅ Step 2: Basic Operational Safety - Error handling middleware added
+- ✅ Step 3: Environment Separation - Environment detection implemented
+
+**Phase 2: Access Control (3 steps)**
+- ⏳ Step 4: Authentication for Write Operations - Pending
+- ⏳ Step 5: Change Rationale Enforcement - Pending
+- ⏳ Step 6: Audit Log for Material Changes - Pending
+
+**Phase 3: Environment Safety (1 step)**
+- ⏳ Step 7: Seeding Discipline - Pending
+
+### 📋 Staging Environment Setup
+- Documentation created: `RAILWAY_STAGING_SETUP.md`
+- Manual setup required via Railway dashboard
+- See `RAILWAY_STAGING_SETUP.md` for detailed instructions
+
 ## Next Steps
-1. Resolve firewall issue to view live app
-2. Implement missing features
-3. Add authentication
-4. Deploy to production
+1. ⏭️ Set up staging environment (manual Railway dashboard action)
+2. ⏭️ Implement Phase 2: Access Control (authentication, change rationale, audit logging)
+3. ⏭️ Implement Phase 3: Environment Safety (seeding discipline)
+4. ⏭️ Add monitoring and observability
+5. ⏭️ Implement missing MVP features (founder updates, forecast entry, notes)
