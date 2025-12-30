@@ -15,6 +15,7 @@ enum InvestmentType {
 }
 
 enum InvestmentStatus {
+  PENDING_REVIEW
   ACTIVE
   EXITED
   WRITTEN_OFF
@@ -40,9 +41,11 @@ enum CashflowType {
 
 enum DocumentType {
   PITCH_DECK
-  BASE_CASE_MODEL
-  IC_MEMO
-  BUSINESS_PLAN
+  FINANCIAL_MODEL
+  HISTORICAL_FINANCIALS
+  LEGAL_SHAREHOLDING
+  MARKET_RESEARCH
+  OTHER
 }
 
 enum DocumentVersionType {
@@ -162,6 +165,7 @@ model Investment {
   documents                 Document[]
   auditLogs                 AuditLog[]
   actionsRequired           ActionRequired[]
+  reviewJobs                ReviewJob[]
 }
 
 model Founder {
@@ -275,10 +279,16 @@ model Document {
   type            DocumentType
   versionType     DocumentVersionType
   filePath        String
+  storageUrl      String
   fileName        String
   fileSize        Int
+  contentType     String
+  checksum        String
+  status          String              @default("uploaded")
   uploadedAt      DateTime            @default(now())
   uploadedBy      String
+  isCurrent       Boolean             @default(true)
+  createdAt       DateTime            @default(now())
 }
 
 model AuditLog {
@@ -313,4 +323,28 @@ model ActionRequired {
   clearRationale          String?
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
+}
+
+enum ReviewJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model ReviewJob {
+  id                String          @id @default(uuid())
+  investmentId      String
+  investment        Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  status            ReviewJobStatus @default(QUEUED)
+  progress          Int             @default(0)
+  errorMessage      String?
+  resultLocation    String?
+  summaryJson       Json?
+  docChecksums      String
+  reviewConfigVersion String         @default("1.0")
+  createdAt         DateTime        @default(now())
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  retryCount        Int             @default(0)
 }
