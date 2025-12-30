@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
+import { authenticate, AuthRequest } from './middleware/auth';
+import { requireChangeRationale, ChangeRationaleRequest } from './middleware/changeRationale';
+import { logInvestmentUpdate, logValuationUpdate, logActionRequiredUpdate, logActionRequiredCleared } from './lib/auditLogger';
 
 dotenv.config();
 
@@ -62,18 +65,61 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
   res.json(investment);
 }));
 
-app.post('/api/investments', asyncHandler(async (req, res) => {
+app.post('/api/investments', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
+  const { rationale } = req;
+  const changedBy = req.user?.name || 'Unknown';
+
   const investment = await prisma.investment.create({
     data: req.body,
   });
+
+  await prisma.auditLog.create({
+    data: {
+      investmentId: investment.id,
+      action: 'INVESTMENT_CREATED',
+      rationale,
+      changedBy,
+    },
+  });
+
   res.status(201).json(investment);
 }));
 
-app.put('/api/investments/:id', asyncHandler(async (req, res) => {
+app.put('/api/investments/:id', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
+  const { id } = req.params;
+  const { rationale } = req;
+  const changedBy = req.user?.name || 'Unknown';
+
+  const existingInvestment = await prisma.investment.findUnique({
+    where: { id },
+  });
+
+  if (!existingInvestment) {
+    const error = new Error('Investment not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
+  }
+
+  const changes: Record<string, { old: any; new: any }> = {};
+  for (const key in req.body) {
+    if (existingInvestment[key as keyof typeof existingInvestment] !== req.body[key]) {
+      changes[key] = {
+        old: existingInvestment[key as keyof typeof existingInvestment],
+        new: req.body[key],
+      };
+    }
+  }
+
   const investment = await prisma.investment.update({
-    where: { id: req.params.id },
+    where: { id },
     data: req.body,
   });
+
+  if (Object.keys(changes).length > 0) {
+    await logInvestmentUpdate(id, changes, rationale, changedBy);
+  }
+
   res.json(investment);
 }));
 
@@ -96,6 +142,111 @@ app.get('/api/actions/:id', asyncHandler(async (req, res) => {
     error.isOperational = true;
     throw error;
   }
+  res.json(action);
+}));
+
+app.post('/api/valuations', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
+  const { investmentId, fairValueEur, valuationDate, changedBy: requestChangedBy } = req.body;
+  const { rationale } = req;
+  const changedBy = requestChangedBy || req.user?.name || 'Unknown';
+
+  const existingInvestment = await prisma.investment.findUnique({
+    where: { id: investmentId },
+  });
+
+  if (!existingInvestment) {
+    const error = new Error('Investment not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
+  }
+
+  await logValuationUpdate(investmentId, existingInvestment.currentFairValueEur, fairValueEur, rationale, changedBy);
+
+  const valuation = await prisma.valuation.create({
+    data: {
+      investmentId,
+      fairValueEur,
+      valuationDate: new Date(valuationDate),
+      rationale,
+      changedBy,
+    },
+  });
+
+  await prisma.investment.update({
+    where: { id: investmentId },
+    data: { currentFairValueEur: fairValueEur },
+  });
+
+  res.status(201).json(valuation);
+}));
+
+app.put('/api/actions/:id', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
+  const { id } = req.params;
+  const { rationale } = req;
+  const changedBy = req.user?.name || 'Unknown';
+
+  const existingAction = await prisma.actionRequired.findUnique({
+    where: { id },
+  });
+
+  if (!existingAction) {
+    const error = new Error('Action not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
+  }
+
+  const changes: Record<string, { old: any; new: any }> = {};
+  for (const key in req.body) {
+    if (existingAction[key as keyof typeof existingAction] !== req.body[key]) {
+      changes[key] = {
+        old: existingAction[key as keyof typeof existingAction],
+        new: req.body[key],
+      };
+    }
+  }
+
+  const action = await prisma.actionRequired.update({
+    where: { id },
+    data: req.body,
+  });
+
+  if (Object.keys(changes).length > 0) {
+    await logActionRequiredUpdate(existingAction.investmentId, id, changes, rationale, changedBy);
+  }
+
+  res.json(action);
+}));
+
+app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
+  const { id } = req.params;
+  const { rationale } = req;
+  const changedBy = req.user?.name || 'Unknown';
+
+  const existingAction = await prisma.actionRequired.findUnique({
+    where: { id },
+  });
+
+  if (!existingAction) {
+    const error = new Error('Action not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
+  }
+
+  await logActionRequiredCleared(existingAction.investmentId, id, rationale, changedBy);
+
+  const action = await prisma.actionRequired.update({
+    where: { id },
+    data: {
+      status: 'CLEARED',
+      clearedAt: new Date(),
+      clearedBy: changedBy,
+      clearRationale: rationale,
+    },
+  });
+
   res.json(action);
 }));
 
