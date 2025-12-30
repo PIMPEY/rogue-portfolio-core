@@ -9,10 +9,7 @@ echo "DATABASE_URL is set: ${DATABASE_URL:+yes}"
 
 # Run database migrations
 echo "Running Prisma migrations..."
-npx prisma migrate deploy || {
-  echo "No migrations found, using db push for initial setup"
-  npx prisma db push
-}
+npx prisma migrate deploy
 
 # Start the server
 echo "Starting server..."

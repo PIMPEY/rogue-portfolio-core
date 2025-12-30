@@ -21,7 +21,7 @@
         "watchPatterns": ["**"]
       },
       "deploy": {
-        "startCommand": "npm run generate && npm run migrate:deploy && npm run start",
+        "startCommand": "bash .railway/start.sh",
         "healthcheckPath": "/health"
       }
     }
