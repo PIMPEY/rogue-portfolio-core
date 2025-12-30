@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Railway build script
+# Railway build script - migrations run at startup, not build
 set -e
 
 echo "Starting Railway build..."
