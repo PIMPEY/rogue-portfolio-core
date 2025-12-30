@@ -8,9 +8,9 @@ echo "Starting Railway build..."
 echo "Switching to Railway schema..."
 cp prisma/schema.prisma.railway prisma/schema.prisma
 
-# Generate Prisma Client with Railway schema
+# Generate Prisma Client
 echo "Generating Prisma Client..."
-npx prisma generate --schema=prisma/schema.prisma.railway
+npx prisma generate
 
 # Build TypeScript
 echo "Building TypeScript..."
