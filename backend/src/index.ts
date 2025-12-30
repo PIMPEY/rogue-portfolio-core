@@ -6,6 +6,10 @@ import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorH
 import { authenticate, AuthRequest } from './middleware/auth';
 import { requireChangeRationale, ChangeRationaleRequest } from './middleware/changeRationale';
 import { logInvestmentUpdate, logValuationUpdate, logActionRequiredUpdate, logActionRequiredCleared } from './lib/auditLogger';
+import { handler as presignedUrlHandler } from './api/documents/presigned-url/route';
+import { handler as uploadCompleteHandler } from './api/documents/upload-complete/route';
+import { handler as startReviewHandler } from './api/review/start/route';
+import { handler as reviewJobHandler } from './api/review/[id]/route';
 
 dotenv.config();
 
@@ -18,6 +22,12 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+app.post('/api/documents/presigned-url', asyncHandler(presignedUrlHandler));
+app.post('/api/documents/upload-complete', asyncHandler(uploadCompleteHandler));
+app.post('/api/review/start', asyncHandler(startReviewHandler));
+app.get('/api/review/:id', asyncHandler(reviewJobHandler));
+app.post('/api/review/:id', asyncHandler(reviewJobHandler));
 
 app.get('/api/portfolio', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({

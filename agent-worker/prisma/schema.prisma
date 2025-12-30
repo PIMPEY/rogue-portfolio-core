@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model ReviewJob {
+  id                String          @id @default(uuid())
+  investmentId      String
+  status            ReviewJobStatus @default(QUEUED)
+  progress          Int             @default(0)
+  errorMessage      String?
+  resultLocation    String?
+  summaryJson       Json?
+  docChecksums      String
+  reviewConfigVersion String         @default("1.0")
+  createdAt         DateTime        @default(now())
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  retryCount        Int             @default(0)
+}
