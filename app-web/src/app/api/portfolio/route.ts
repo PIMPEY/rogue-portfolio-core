@@ -15,7 +15,8 @@ export async function GET() {
     if (response.ok) {
       const portfolio = await response.json();
       console.log('Portfolio data:', portfolio);
-      return NextResponse.json(portfolio);
+      // Ensure we always return an array
+      return NextResponse.json(Array.isArray(portfolio) ? portfolio : []);
     }
     
     const errorText = await response.text();

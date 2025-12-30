@@ -86,11 +86,14 @@ export default function PortfolioDashboard() {
     fetch('/api/portfolio')
       .then(res => res.json())
       .then(data => {
-        setInvestments(data);
+        // Ensure data is always an array
+        const investmentsArray = Array.isArray(data) ? data : [];
+        setInvestments(investmentsArray);
         setLoading(false);
       })
       .catch(err => {
         console.error('Error fetching portfolio:', err);
+        setInvestments([]);
         setLoading(false);
       });
   }, []);
@@ -321,6 +324,23 @@ export default function PortfolioDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading portfolio...</div>
+      </div>
+    );
+  }
+
+  if (investments.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">No Investments Yet</h1>
+          <p className="text-gray-600 mb-6">Get started by creating your first investment</p>
+          <Link
+            href="/simple-mvp"
+            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Create Investment
+          </Link>
+        </div>
       </div>
     );
   }
