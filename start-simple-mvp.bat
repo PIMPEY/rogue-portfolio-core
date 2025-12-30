@@ -1,22 +1,31 @@
 @echo off
+REM Change to the directory where this batch file is located
+cd /d "%~dp0"
+
 echo ========================================
 echo Starting Simple MVP
 echo ========================================
+echo.
+echo Current directory: %CD%
 echo.
 
 REM Check if node_modules exist
 if not exist "backend\node_modules" (
     echo ERROR: backend node_modules not found!
-    echo Please run: cd backend && npm install
-    pause
-    exit /b 1
+    echo Installing backend dependencies...
+    cd backend
+    call npm install
+    cd ..
+    echo.
 )
 
 if not exist "app-web\node_modules" (
     echo ERROR: app-web node_modules not found!
-    echo Please run: cd app-web && npm install
-    pause
-    exit /b 1
+    echo Installing frontend dependencies...
+    cd app-web
+    call npm install
+    cd ..
+    echo.
 )
 
 echo [1/2] Starting Backend Server...

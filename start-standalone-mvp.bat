@@ -1,7 +1,12 @@
 @echo off
+REM Change to the directory where this batch file is located
+cd /d "%~dp0"
+
 echo ========================================
 echo Starting Standalone Simple MVP
 echo ========================================
+echo.
+echo Current directory: %CD%
 echo.
 echo This opens the standalone HTML file that works without any servers.
 echo No backend or frontend required!
@@ -15,6 +20,7 @@ if exist "simple-mvp-standalone.html" (
 ) else (
     echo ERROR: simple-mvp-standalone.html not found!
     echo Please make sure you're in the correct directory.
+    echo Current directory: %CD%
 )
 
 echo.
