@@ -125,21 +125,7 @@
         document.addEventListener('DOMContentLoaded', loadInvestments);
 
         async function loadInvestments() {
-            // First, try to load from localStorage
-            const stored = localStorage.getItem('rogue_investments');
-            if (stored) {
-                try {
-                    allInvestments = JSON.parse(stored);
-                    renderInvestments();
-                    updateStats();
-                    renderCharts();
-                    return;
-                } catch (e) {
-                    console.error('Error loading from localStorage:', e);
-                }
-            }
-
-            // If no localStorage data, try backend
+            // First, try to load from Railway backend
             try {
                 const response = await fetch(`${BACKEND_URL}/api/portfolio`);
                 if (response.ok) {
@@ -148,13 +134,30 @@
                     renderInvestments();
                     updateStats();
                     renderCharts();
-                } else {
-                    showEmptyState();
+                    console.log(`Loaded ${allInvestments.length} investments from Railway`);
+                    return;
                 }
             } catch (error) {
-                console.error('Failed to load investments:', error);
-                showEmptyState();
+                console.log('Railway not available, trying localStorage...');
             }
+
+            // Fallback to localStorage
+            const stored = localStorage.getItem('rogue_investments');
+            if (stored) {
+                try {
+                    allInvestments = JSON.parse(stored);
+                    renderInvestments();
+                    updateStats();
+                    renderCharts();
+                    console.log(`Loaded ${allInvestments.length} investments from localStorage`);
+                    return;
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                }
+            }
+
+            // No data available
+            showEmptyState();
         }
 
         function renderInvestments() {
