@@ -138,7 +138,8 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'https://rogue-portfolio-core-production.up.railway.app';
+        const BACKEND_URL = 'http://localhost:3001';
+        const RAILWAY_URL = 'https://rogue-portfolio-core-production.up.railway.app';
         let investment = null;
 
         // Get investment ID from URL
@@ -154,7 +155,33 @@
         });
 
         async function loadInvestment(id) {
-            // First, try to load from localStorage
+            // First, try to load from local backend
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/investments/${id}`);
+                if (response.ok) {
+                    investment = await response.json();
+                    renderInvestment();
+                    console.log(`Loaded investment from local backend`);
+                    return;
+                }
+            } catch (error) {
+                console.log('Local backend not available, trying Railway...');
+            }
+
+            // Fallback to Railway
+            try {
+                const response = await fetch(`${RAILWAY_URL}/api/investments/${id}`);
+                if (response.ok) {
+                    investment = await response.json();
+                    renderInvestment();
+                    console.log(`Loaded investment from Railway`);
+                    return;
+                }
+            } catch (error) {
+                console.log('Railway not available, trying localStorage...');
+            }
+
+            // Fallback to localStorage
             const stored = localStorage.getItem('rogue_investments');
             if (stored) {
                 try {
@@ -162,6 +189,7 @@
                     investment = investments.find(inv => inv.id === id);
                     if (investment) {
                         renderInvestment();
+                        console.log(`Loaded investment from localStorage`);
                         return;
                     }
                 } catch (e) {
@@ -169,19 +197,8 @@
                 }
             }
 
-            // If not in localStorage, try backend
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/investments/${id}`);
-                if (response.ok) {
-                    investment = await response.json();
-                    renderInvestment();
-                } else {
-                    showError('Investment not found');
-                }
-            } catch (error) {
-                console.error('Failed to load investment:', error);
-                showError('Failed to load investment data');
-            }
+            // Not found
+            showError('Investment not found');
         }
 
         function renderInvestment() {

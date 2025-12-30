@@ -5,15 +5,16 @@ echo ========================================
 echo Project Rogue - Demo
 echo ========================================
 echo.
-echo Opening Portfolio Dashboard...
-echo This will load data from Railway backend.
+echo Opening Local Demo...
+echo This will load data from local backend.
 echo.
 
-start portfolio-standalone.html
+start demo-local.html
 
 echo.
-echo Portfolio should open in your browser.
+echo Demo should open in your browser.
 echo.
-echo If data doesn't load, check browser console (F12) for errors.
+echo If data doesn't load, make sure local servers are running.
+echo Run: start-all.bat
 echo.
 pause

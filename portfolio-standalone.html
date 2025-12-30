@@ -117,7 +117,9 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'https://rogue-portfolio-core-production.up.railway.app';
+        // Try localhost first, fallback to Railway
+        const BACKEND_URL = 'http://localhost:3001';
+        const RAILWAY_URL = 'https://rogue-portfolio-core-production.up.railway.app';
         let allInvestments = [];
         let currentFilter = 'ALL';
 
@@ -125,9 +127,25 @@
         document.addEventListener('DOMContentLoaded', loadInvestments);
 
         async function loadInvestments() {
-            // First, try to load from Railway backend
+            // First, try to load from local backend
             try {
                 const response = await fetch(`${BACKEND_URL}/api/portfolio`);
+                if (response.ok) {
+                    allInvestments = await response.json();
+                    localStorage.setItem('rogue_investments', JSON.stringify(allInvestments));
+                    renderInvestments();
+                    updateStats();
+                    renderCharts();
+                    console.log(`Loaded ${allInvestments.length} investments from local backend`);
+                    return;
+                }
+            } catch (error) {
+                console.log('Local backend not available, trying Railway...');
+            }
+
+            // Fallback to Railway
+            try {
+                const response = await fetch(`${RAILWAY_URL}/api/portfolio`);
                 if (response.ok) {
                     allInvestments = await response.json();
                     localStorage.setItem('rogue_investments', JSON.stringify(allInvestments));
