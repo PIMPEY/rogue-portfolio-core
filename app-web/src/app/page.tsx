@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PortfolioCharts from '@/components/PortfolioCharts';
 import ActionsPanel from '@/components/ActionsPanel';
@@ -72,8 +73,10 @@ const VIEW_PRESETS: Record<ViewPreset, ColumnKey[]> = {
 };
 
 export default function PortfolioDashboard() {
+  const router = useRouter();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'ALL' | 'GREEN' | 'AMBER' | 'RED'>('ALL');
   const [viewPreset, setViewPreset] = useState<ViewPreset>('ALL');
   const [columns, setColumns] = useState<Column[]>([]);
@@ -84,7 +87,12 @@ export default function PortfolioDashboard() {
 
   useEffect(() => {
     fetch('/api/portfolio')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Backend returned ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         // Ensure data is always an array
         const investmentsArray = Array.isArray(data) ? data : [];
@@ -93,6 +101,7 @@ export default function PortfolioDashboard() {
       })
       .catch(err => {
         console.error('Error fetching portfolio:', err);
+        setError(err.message);
         setInvestments([]);
         setLoading(false);
       });
@@ -324,6 +333,38 @@ export default function PortfolioDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading portfolio...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Backend Connection Error</h1>
+          <p className="text-gray-600 mb-6">
+            Unable to connect to the backend server. This might be because:
+          </p>
+          <ul className="text-left text-gray-600 mb-6 space-y-2">
+            <li>• The backend is still starting up</li>
+            <li>• The database is not connected</li>
+            <li>• There's a network issue</li>
+          </ul>
+          <div className="space-y-3">
+            <Link
+              href="/simple-mvp"
+              className="block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Use Simple MVP (Works Offline)
+            </Link>
+            <button
+              onClick={() => window.location.reload()}
+              className="block w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
