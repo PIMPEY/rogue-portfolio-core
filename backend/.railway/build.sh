@@ -6,7 +6,7 @@ echo "Starting Railway build..."
 
 # Install dependencies
 echo "Installing dependencies..."
-npm ci
+npm install --legacy-peer-deps
 
 # Generate Prisma Client
 echo "Generating Prisma Client..."
