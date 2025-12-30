@@ -265,7 +265,7 @@ model Valuation {
   valuationDate   DateTime
   rationale       String
   changedBy       String
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime        @default(now())
 }
 
 model Document {
@@ -277,43 +277,40 @@ model Document {
   filePath        String
   fileName        String
   fileSize        Int
+  uploadedAt      DateTime            @default(now())
   uploadedBy      String
-  isCurrent       Boolean             @default(false)
-  createdAt       DateTime            @default(now())
 }
 
 model AuditLog {
-  id              String          @id @default(uuid())
-  investmentId    String
-  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  actionRequiredId String?
-  actionRequired  ActionRequired? @relation(fields: [actionRequiredId], references: [id], onDelete: SetNull)
-  action          AuditAction
-  fieldName       String?
-  oldValue        String?
-  newValue        String?
-  rationale       String?
-  changedBy       String
-  createdAt       DateTime        @default(now())
+  id                String      @id @default(uuid())
+  investmentId      String
+  investment        Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  actionRequiredId  String?
+  action            AuditAction
+  fieldName         String?
+  oldValue          String?
+  newValue          String?
+  rationale         String?
+  changedBy         String
+  createdAt         DateTime    @default(now())
 }
 
 model ActionRequired {
-  id                    String        @id @default(uuid())
-  investmentId          String
-  investment            Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  type                  ActionType
-  actionOwner           String
-  reviewDate            DateTime
-  notes                 String
-  status                ActionStatus  @default(PENDING)
-  exitType              ExitType?
-  indicativeValuationMin Float?
-  indicativeValuationMax Float?
-  knownAcquirers        String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  clearedAt             DateTime?
-  clearedBy             String?
-  clearRationale        String?
-  auditLogs             AuditLog[]
+  id                      String        @id @default(uuid())
+  investmentId            String
+  investment              Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type                    ActionType
+  actionOwner             String
+  reviewDate              DateTime
+  notes                   String
+  status                  ActionStatus  @default(PENDING)
+  exitType                ExitType?
+  indicativeValuationMin  Float?
+  indicativeValuationMax  Float?
+  knownAcquirers          String?
+  clearedAt               DateTime?
+  clearedBy               String?
+  clearRationale          String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 }
