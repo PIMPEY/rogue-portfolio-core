@@ -16,7 +16,19 @@ const companyNames = [
 ];
 
 async function main() {
+  const NODE_ENV = process.env.NODE_ENV || 'development';
+  const RAILWAY_ENVIRONMENT = process.env.RAILWAY_ENVIRONMENT_NAME || 'unknown';
+
+  if (NODE_ENV === 'production' || RAILWAY_ENVIRONMENT === 'production') {
+    console.error('❌ SEEDING BLOCKED: Cannot seed database in production environment');
+    console.error('   NODE_ENV:', NODE_ENV);
+    console.error('   RAILWAY_ENVIRONMENT:', RAILWAY_ENVIRONMENT);
+    console.error('   Seeding is only allowed in development/staging environments');
+    process.exit(1);
+  }
+
   console.log('Starting seed...');
+  console.log('Environment:', NODE_ENV);
 
   for (let i = 0; i < 20; i++) {
     const companyName = companyNames[i];
