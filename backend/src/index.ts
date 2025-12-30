@@ -40,9 +40,70 @@ app.get('/api/portfolio', asyncHandler(async (req, res) => {
       cashflows: true,
       valuations: true,
       flags: true,
+      founderUpdates: true,
     },
   });
-  res.json(investments);
+
+  // Transform data to match frontend expectations
+  const transformed = investments.map(inv => {
+    // Calculate gross MOIC
+    const grossMoic = inv.committedCapitalLcl > 0
+      ? (inv.currentFairValueEur / inv.committedCapitalLcl).toFixed(2)
+      : '0.00';
+
+    // Calculate gross IRR (simplified)
+    const grossIrr = '0.00'; // Would need proper XIRR calculation
+
+    // Map status to GREEN/AMBER/RED based on flags
+    const activeFlags = inv.flags.filter(f => f.status !== 'RESOLVED').length;
+    let status = 'GREEN';
+    if (activeFlags >= 3) status = 'RED';
+    else if (activeFlags >= 1) status = 'AMBER';
+
+    // Count founder updates
+    const totalUpdates = inv.founderUpdates.length;
+    const latestUpdateQuarter = totalUpdates > 0
+      ? Math.max(...inv.founderUpdates.map(u => u.quarterIndex))
+      : 0;
+
+    return {
+      id: inv.id,
+      companyName: inv.companyName,
+      sector: inv.sector,
+      stage: inv.stage,
+      geography: inv.geography,
+      investmentType: inv.investmentType,
+      committedCapitalEur: inv.committedCapitalLcl,
+      deployedCapitalEur: inv.deployedCapitalLcl,
+      ownershipPercent: inv.ownershipPercent,
+      investmentDate: inv.investmentExecutionDate.toISOString().split('T')[0],
+      currentFairValueEur: inv.currentFairValueEur,
+      grossMoic: grossMoic,
+      grossIrr: grossIrr,
+      roundSizeEur: inv.roundSizeEur,
+      enterpriseValueEur: inv.enterpriseValueEur,
+      runway: null, // Would need calculation from founder updates
+      status: status,
+      activeFlags: activeFlags,
+      founders: inv.founders.map(f => ({
+        name: f.name,
+        email: f.email
+      })),
+      raisedFollowOnCapital: inv.raisedFollowOnCapital,
+      clearProductMarketFit: inv.clearProductMarketFit,
+      meaningfulRevenue: inv.meaningfulRevenue,
+      totalUpdates: totalUpdates,
+      latestUpdateQuarter: latestUpdateQuarter,
+      // Include raw data for companies page
+      _raw: {
+        founderUpdates: inv.founderUpdates,
+        forecasts: [], // Would need to include forecasts
+        flags: inv.flags
+      }
+    };
+  });
+
+  res.json(transformed);
 }));
 
 app.get('/api/investments', asyncHandler(async (req, res) => {
@@ -76,7 +137,83 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
     error.isOperational = true;
     throw error;
   }
-  res.json(investment);
+
+  // Transform to match frontend expectations
+  const grossMoic = investment.committedCapitalLcl > 0
+    ? (investment.currentFairValueEur / investment.committedCapitalLcl).toFixed(2)
+    : '0.00';
+
+  const activeFlags = investment.flags.filter(f => f.status !== 'RESOLVED').length;
+  let status = 'GREEN';
+  if (activeFlags >= 3) status = 'RED';
+  else if (activeFlags >= 1) status = 'AMBER';
+
+  const transformed = {
+    id: investment.id,
+    companyName: investment.companyName,
+    sector: investment.sector,
+    stage: investment.stage,
+    geography: investment.geography,
+    investmentType: investment.investmentType,
+    committedCapitalLcl: investment.committedCapitalLcl,
+    deployedCapitalLcl: investment.deployedCapitalLcl,
+    ownershipPercent: investment.ownershipPercent,
+    investmentDate: investment.investmentExecutionDate.toISOString().split('T')[0],
+    currentFairValueEur: investment.currentFairValueEur,
+    grossMoic: grossMoic,
+    grossIrr: '0.00',
+    roundSizeEur: investment.roundSizeEur,
+    enterpriseValueEur: investment.enterpriseValueEur,
+    status: status,
+    activeFlags: activeFlags,
+    founders: investment.founders.map(f => ({
+      name: f.name,
+      email: f.email
+    })),
+    raisedFollowOnCapital: investment.raisedFollowOnCapital,
+    clearProductMarketFit: investment.clearProductMarketFit,
+    meaningfulRevenue: investment.meaningfulRevenue,
+    founderUpdates: investment.founderUpdates.map(u => ({
+      id: u.id,
+      quarterIndex: u.quarterIndex,
+      dueDate: u.dueDate.toISOString().split('T')[0],
+      submittedAt: u.submittedAt.toISOString().split('T')[0],
+      status: u.status,
+      actualRevenue: u.actualRevenue,
+      actualBurn: u.actualBurn,
+      actualRunwayMonths: u.actualRunwayMonths,
+      actualTraction: u.actualTraction,
+      narrativeGood: u.narrativeGood,
+      narrativeBad: u.narrativeBad,
+      narrativeHelp: u.narrativeHelp
+    })),
+    forecasts: investment.forecasts.map(f => ({
+      id: f.id,
+      version: f.version,
+      startQuarter: f.startQuarter.toISOString().split('T')[0],
+      horizonQuarters: f.horizonQuarters,
+      rationale: f.rationale,
+      metrics: f.metrics.map(m => ({
+        id: m.id,
+        metric: m.metric,
+        quarterIndex: m.quarterIndex,
+        value: m.value
+      }))
+    })),
+    flags: investment.flags.map(f => ({
+      id: f.id,
+      type: f.type,
+      metric: f.metric,
+      threshold: f.threshold,
+      actualValue: f.actualValue,
+      forecastValue: f.forecastValue,
+      deltaPct: f.deltaPct,
+      status: f.status,
+      createdAt: f.createdAt.toISOString().split('T')[0]
+    }))
+  };
+
+  res.json(transformed);
 }));
 
 app.post('/api/investments', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
