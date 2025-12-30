@@ -149,8 +149,8 @@ export default function PortfolioDashboard() {
     const bVal = b[sortColumn as keyof Investment];
     
     if (aVal === bVal) return 0;
-    if (aVal === null) return 1;
-    if (bVal === null) return -1;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
     
     const comparison = aVal < bVal ? -1 : 1;
     return sortDirection === 'asc' ? comparison : -comparison;
@@ -174,8 +174,8 @@ export default function PortfolioDashboard() {
     }
   };
 
-  const formatCurrency = (amount: number | null) => {
-    if (amount === null) return 'N/A';
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount === null || amount === undefined || Number.isNaN(amount)) return 'N/A';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'EUR',
@@ -184,8 +184,11 @@ export default function PortfolioDashboard() {
     }).format(amount);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date?: string | null) => {
+    if (!date) return 'N/A';
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return 'N/A';
+    return parsed.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
