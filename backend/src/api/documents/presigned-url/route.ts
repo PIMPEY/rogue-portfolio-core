@@ -1,5 +1,5 @@
 import { NextResponse } from 'express';
-import { generatePresignedUploadUrl, generateDocumentKey } from '../../../lib/storage';
+import { generatePresignedUploadUrl, generateDocumentKey, isS3Configured } from '../../../lib/storage';
 import { prisma } from '../../../lib/prisma';
 
 export async function handler(req: any, res: any) {
@@ -8,6 +8,12 @@ export async function handler(req: any, res: any) {
   }
 
   try {
+    if (!isS3Configured) {
+      return res.status(503).json({ 
+        error: 'Document storage is not configured. Please contact administrator to set up AWS S3 credentials.' 
+      });
+    }
+
     const { investmentId, fileName, contentType } = req.body;
 
     if (!investmentId || !fileName || !contentType) {
@@ -28,6 +34,6 @@ export async function handler(req: any, res: any) {
     res.json({ url, key });
   } catch (error: any) {
     console.error('Error generating presigned URL:', error);
-    res.status(500).json({ error: 'Failed to generate upload URL' });
+    res.status(500).json({ error: 'Failed to generate upload URL', details: error.message });
   }
 }
