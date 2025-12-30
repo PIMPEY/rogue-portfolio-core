@@ -1,12 +1,29 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "bash .railway/build.sh",
-    "watchPatterns": ["app-web/**"]
-  },
-  "deploy": {
-    "startCommand": "cd app-web && npm run start",
-    "healthcheckPath": "/api/health"
+  "services": {
+    "frontend": {
+      "root": "app-web",
+      "build": {
+        "builder": "NIXPACKS",
+        "buildCommand": "bash .railway/build.sh",
+        "watchPatterns": ["**"]
+      },
+      "deploy": {
+        "startCommand": "npm run start",
+        "healthcheckPath": "/api/health"
+      }
+    },
+    "backend": {
+      "root": "backend",
+      "build": {
+        "builder": "NIXPACKS",
+        "buildCommand": "bash .railway/build.sh",
+        "watchPatterns": ["**"]
+      },
+      "deploy": {
+        "startCommand": "npm run start",
+        "healthcheckPath": "/health"
+      }
+    }
   }
 }

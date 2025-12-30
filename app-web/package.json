@@ -4,14 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "prisma migrate deploy --schema=prisma/schema.prisma.railway || echo 'Migration failed, continuing...' && next start -p $PORT",
-    "lint": "eslint",
-    "seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "build": "next build",
+    "start": "next start -p $PORT",
+    "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.1",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -22,14 +19,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "prisma": "^6.19.1",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

@@ -140,3 +140,11 @@ vite.config.ts.timestamp-*
 
 # Root package-lock.json (app-web has its own)
 package-lock.json
+
+# Backend
+backend/node_modules
+backend/dist
+backend/.env
+backend/prisma/dev.db
+backend/prisma/dev.db-shm
+backend/prisma/dev.db-wal

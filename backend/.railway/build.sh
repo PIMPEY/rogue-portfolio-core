@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Railway build script
 set -e
 
 echo "Starting Railway build..."
@@ -9,8 +8,12 @@ echo "Starting Railway build..."
 echo "Installing dependencies..."
 npm ci
 
-# Build Next.js app
-echo "Building Next.js app..."
+# Generate Prisma Client
+echo "Generating Prisma Client..."
+npx prisma generate
+
+# Build TypeScript
+echo "Building TypeScript..."
 npm run build
 
 echo "Build complete!"

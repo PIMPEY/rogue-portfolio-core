@@ -1,35 +1,18 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { ActionStatus } from '@prisma/client';
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const investmentId = searchParams.get('investmentId');
-    const status = searchParams.get('status');
-
-    const where: any = {};
-    if (investmentId) {
-      where.investmentId = investmentId;
+    const url = new URL(`${BACKEND_URL}/api/actions`);
+    searchParams.forEach((value, key) => url.searchParams.set(key, value));
+    
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error('Backend request failed');
     }
-    if (status) {
-      where.status = status;
-    }
-
-    const actions = await prisma.actionRequired.findMany({
-      where,
-      include: {
-        investment: {
-          select: {
-            companyName: true,
-            sector: true,
-            stage: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
+    const actions = await response.json();
     return NextResponse.json(actions);
   } catch (error) {
     console.error('Error fetching actions:', error);
@@ -40,44 +23,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const {
-      investmentId,
-      type,
-      actionOwner,
-      reviewDate,
-      notes,
-      exitType,
-      indicativeValuationMin,
-      indicativeValuationMax,
-      knownAcquirers
-    } = body;
-
-    const action = await prisma.actionRequired.create({
-      data: {
-        investmentId,
-        type,
-        actionOwner,
-        reviewDate: new Date(reviewDate),
-        notes,
-        exitType,
-        indicativeValuationMin,
-        indicativeValuationMax,
-        knownAcquirers,
-        status: ActionStatus.PENDING
-      }
+    const response = await fetch(`${BACKEND_URL}/api/actions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
-
-    await prisma.auditLog.create({
-      data: {
-        investmentId,
-        actionRequiredId: action.id,
-        action: 'ACTION_REQUIRED_CREATED',
-        fieldName: 'type',
-        newValue: type,
-        changedBy: actionOwner
-      }
-    });
-
+    if (!response.ok) {
+      throw new Error('Backend request failed');
+    }
+    const action = await response.json();
     return NextResponse.json(action);
   } catch (error) {
     console.error('Error creating action:', error);
