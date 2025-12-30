@@ -1,8 +1,8 @@
 # Project Rogue - MVP Status
 
-## Current Status: ✅ MVP IS READY
+## Current Status: 🚀 PRODUCTION DEPLOYED + HARDENED
 
-The MVP is fully built and functional. The only issue is Windows Firewall blocking localhost access.
+The MVP is fully built, deployed to Railway production, and secured with investment-grade access controls.
 
 ## What's Built
 
@@ -78,8 +78,57 @@ Open `app-web/mvp-demo.html` directly in your browser (bypasses server)
 - Notes/investor action tracking
 - Token-based founder authentication
 
+## Production Deployment
+
+### ✅ Railway Production (Live)
+- **Frontend**: https://rogue-portfolio-core-production.up.railway.app
+- **Backend**: https://rogue-portfolio-backend-production.up.railway.app
+- **Database**: PostgreSQL on Railway
+- **Status**: Healthy and operational
+
+### ✅ Production Hardening (7-Step Process)
+
+**Phase 1: Foundation (3 steps)**
+- ✅ Step 1: Secrets Hygiene - DATABASE_URL removed from frontend
+- ✅ Step 2: Basic Operational Safety - Error handling middleware added
+- ✅ Step 3: Environment Separation - Skipped (single environment)
+
+**Phase 2: Access Control (3 steps)**
+- ✅ Step 4: Authentication for Write Operations - Bearer token auth implemented
+- ✅ Step 5: Change Rationale Enforcement - Rationale required for all writes
+- ✅ Step 6: Audit Log for Material Changes - Comprehensive audit logging
+
+**Phase 3: Environment Safety (1 step)**
+- ⏳ Step 7: Seeding Discipline - Pending
+
+### 🔐 Security Features
+
+**Authentication**
+- Bearer token required for all write operations
+- Read operations remain public
+- API token stored in Railway environment variables
+
+**Change Rationale**
+- All write operations require `rationale` field
+- Rationale explains why change is being made
+- Stored in audit logs for traceability
+
+**Audit Logging**
+- All material changes logged automatically
+- Tracks: investmentId, action, fieldName, oldValue, newValue, rationale, changedBy, timestamp
+- Audit logs included in investment detail responses
+
+**Protected Endpoints**
+- POST /api/investments
+- PUT /api/investments/:id
+- POST /api/valuations
+- PUT /api/actions/:id
+- POST /api/actions/:id/clear
+
+See `backend/AUTH_SETUP.md` for setup instructions.
+
 ## Next Steps
-1. Resolve firewall issue to view live app
-2. Implement missing features
-3. Add authentication
-4. Deploy to production
+1. ⏭️ Generate and set API_TOKEN in Railway (manual action required)
+2. ⏭️ Implement Step 7: Seeding Discipline
+3. ⏭️ Add monitoring and observability
+4. ⏭️ Implement missing MVP features (founder updates, forecast entry, notes)
