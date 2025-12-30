@@ -4,9 +4,9 @@ set -e
 
 echo "Starting Railway build..."
 
-# Generate Prisma Client with Railway schema
+# Generate Prisma Client
 echo "Generating Prisma Client..."
-npx prisma generate --schema=prisma/schema.prisma.railway
+npx prisma generate
 
 # Build TypeScript
 echo "Building TypeScript..."

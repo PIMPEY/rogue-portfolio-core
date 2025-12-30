@@ -21,7 +21,7 @@
         "watchPatterns": ["**"]
       },
       "deploy": {
-        "startCommand": "npm run start",
+        "startCommand": "npm run generate && npm run migrate:deploy && npm run start",
         "healthcheckPath": "/health"
       }
     }
