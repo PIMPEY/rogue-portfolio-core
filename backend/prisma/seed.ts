@@ -1,5 +1,8 @@
 import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage, FlagType, MetricType, CashflowType } from '@prisma/client';
 import { evaluateFlags } from '../src/lib/flagEngine';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const prisma = new PrismaClient();
 
