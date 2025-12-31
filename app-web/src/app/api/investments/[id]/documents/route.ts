@@ -61,8 +61,11 @@ export async function POST(
         type,
         versionType,
         filePath: `/uploads/documents/${fileName}`,
+        storageUrl: `/uploads/documents/${fileName}`,
         fileName: file.name,
         fileSize: file.size,
+        contentType: file.type || 'application/octet-stream',
+        checksum: '',
         uploadedBy,
         isCurrent: true
       }
@@ -78,12 +81,12 @@ export async function POST(
       }
     });
 
-    if (versionType === DocumentVersionType.REVISION && type === DocumentType.BUSINESS_PLAN) {
+    if (versionType === DocumentVersionType.REVISION && type === DocumentType.PITCH_DECK) {
       await prisma.flag.create({
         data: {
           investmentId: id,
           type: 'LATE_UPDATE',
-          threshold: 'Revised business plan uploaded - status review required',
+          threshold: 'Revised pitch deck uploaded - status review required',
           status: 'NEW'
         }
       });
