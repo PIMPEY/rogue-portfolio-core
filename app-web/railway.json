@@ -6,7 +6,7 @@
     "watchPatterns": ["**"]
   },
   "deploy": {
-    "startCommand": "npm run start",
+    "startCommand": "bash .railway/start.sh",
     "healthcheckPath": "/api/health"
   }
 }

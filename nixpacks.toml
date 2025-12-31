@@ -1,8 +1,19 @@
+# NOTE: This root-level nixpacks.toml is deprecated.
+# Each service now uses its own nixpacks.toml in their respective directories:
+# - Backend: backend/nixpacks.toml
+# - Frontend: app-web/nixpacks.toml
+#
+# When deploying on Railway, set the root directory to the service directory:
+# - Backend: Set root directory to "backend"
+# - Frontend: Set root directory to "app-web"
+#
+# This file is kept for backward compatibility but should not be used for new deployments.
+
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
 [phases.build]
-cmds = ["cd app-web && npm ci", "cd app-web && npm run build"]
+cmds = ["cd app-web && npm ci --legacy-peer-deps", "cd app-web && npm run build"]
 
 [start]
 cmd = "cd app-web && npm run start"
