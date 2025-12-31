@@ -257,8 +257,11 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
           type: 'OTHER',
           versionType: 'INITIAL',
           filePath: file.filePath,
+          storageUrl: file.storageUrl || file.filePath,
           fileName: file.fileName,
           fileSize: file.fileSize,
+          contentType: file.contentType || 'application/octet-stream',
+          checksum: file.checksum || '',
           uploadedBy: investment.dealOwner,
           isCurrent: true
         }
