@@ -52,10 +52,29 @@ app.post('/api/seed', asyncHandler(async (req, res) => {
     });
   }
 
-  // Import and run seed
-  const { seedProduction } = await import('../prisma/seed-production');
-  const result = await seedProduction();
-  res.json(result);
+  // Run seed using tsx (to avoid TypeScript compilation issues)
+  const { exec } = require('child_process');
+  const util = require('util');
+  const execPromise = util.promisify(exec);
+  
+  try {
+    const { stdout, stderr } = await execPromise('npm run seed:prod', { cwd: __dirname + '/..' });
+    console.log('Seed output:', stdout);
+    if (stderr) console.error('Seed stderr:', stderr);
+    
+    const newCount = await prisma.investment.count();
+    res.json({ 
+      success: true, 
+      message: `Successfully seeded database`,
+      count: newCount 
+    });
+  } catch (error: any) {
+    console.error('Seed error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: `Seed failed: ${error.message}` 
+    });
+  }
 }));
 
 app.post('/api/documents/presigned-url', asyncHandler(presignedUrlHandler));

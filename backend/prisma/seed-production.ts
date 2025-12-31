@@ -99,37 +99,44 @@ async function seedProduction() {
     const baseBurn = 50000 + Math.random() * 100000;
     const baseTraction = 100 + Math.random() * 1000;
 
-    // Create forecast quarters (Base, Upside, Downside)
+    // Create forecast metrics
     for (let q = 0; q < 8; q++) {
       const growthFactor = 1 + (q * 0.15);
       
-      await prisma.forecastQuarter.createMany({
-        data: [
-          {
-            forecastId: forecast.id,
-            quarterIndex: q,
-            scenario: 'BASE',
-            revenue: baseRevenue * growthFactor,
-            burn: baseBurn * (1 - q * 0.05),
-            traction: baseTraction * growthFactor * 1.2
-          },
-          {
-            forecastId: forecast.id,
-            quarterIndex: q,
-            scenario: 'UPSIDE',
-            revenue: baseRevenue * growthFactor * 1.3,
-            burn: baseBurn * (1 - q * 0.05),
-            traction: baseTraction * growthFactor * 1.5
-          },
-          {
-            forecastId: forecast.id,
-            quarterIndex: q,
-            scenario: 'DOWNSIDE',
-            revenue: baseRevenue * growthFactor * 0.7,
-            burn: baseBurn * (1 - q * 0.05) * 1.1,
-            traction: baseTraction * growthFactor * 0.9
-          }
-        ]
+      // Revenue metric
+      await prisma.forecastMetric.create({
+        data: {
+          forecastId: forecast.id,
+          metric: MetricType.REVENUE,
+          quarterIndex: q,
+          baseValue: baseRevenue * growthFactor,
+          upsideValue: baseRevenue * growthFactor * 1.3,
+          downsideValue: baseRevenue * growthFactor * 0.7
+        }
+      });
+
+      // Burn metric
+      await prisma.forecastMetric.create({
+        data: {
+          forecastId: forecast.id,
+          metric: MetricType.BURN,
+          quarterIndex: q,
+          baseValue: baseBurn * (1 - q * 0.05),
+          upsideValue: baseBurn * (1 - q * 0.05),
+          downsideValue: baseBurn * (1 - q * 0.05) * 1.1
+        }
+      });
+
+      // Traction metric
+      await prisma.forecastMetric.create({
+        data: {
+          forecastId: forecast.id,
+          metric: MetricType.TRACTION,
+          quarterIndex: q,
+          baseValue: baseTraction * growthFactor * 1.2,
+          upsideValue: baseTraction * growthFactor * 1.5,
+          downsideValue: baseTraction * growthFactor * 0.9
+        }
       });
     }
 
@@ -138,10 +145,10 @@ async function seedProduction() {
       await prisma.flag.create({
         data: {
           investmentId: investment.id,
-          type: FlagType.RUNWAY_SHORT,
+          type: FlagType.RUNWAY_RISK,
           severity: i % 2 === 0 ? 'HIGH' : 'MEDIUM',
           description: 'Low runway - requires monitoring',
-          status: 'ACTIVE'
+          status: 'NEW'
         }
       });
     }
@@ -150,10 +157,10 @@ async function seedProduction() {
       await prisma.flag.create({
         data: {
           investmentId: investment.id,
-          type: FlagType.VALUATION_CONCERN,
+          type: FlagType.BURN_SPIKE,
           severity: 'MEDIUM',
-          description: 'Recent market conditions affecting valuation',
-          status: 'ACTIVE'
+          description: 'Recent burn rate increase',
+          status: 'NEW'
         }
       });
     }
