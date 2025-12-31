@@ -142,8 +142,9 @@ async function seedProduction() {
         data: {
           investmentId: investment.id,
           type: FlagType.RUNWAY_RISK,
-          severity: i % 2 === 0 ? 'HIGH' : 'MEDIUM',
-          description: 'Low runway - requires monitoring',
+          metric: MetricType.BURN,
+          threshold: '< 6 months',
+          actualValue: 5.2,
           status: 'NEW'
         }
       });
@@ -154,8 +155,11 @@ async function seedProduction() {
         data: {
           investmentId: investment.id,
           type: FlagType.BURN_SPIKE,
-          severity: 'MEDIUM',
-          description: 'Recent burn rate increase',
+          metric: MetricType.BURN,
+          threshold: '> 20% increase',
+          actualValue: 125000,
+          forecastValue: 100000,
+          deltaPct: 25.0,
           status: 'NEW'
         }
       });
