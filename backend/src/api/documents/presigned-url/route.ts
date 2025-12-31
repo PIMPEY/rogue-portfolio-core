@@ -1,4 +1,3 @@
-import { NextResponse } from 'express';
 import { generatePresignedUploadUrl, generateDocumentKey, isS3Configured } from '../../../lib/storage';
 import { prisma } from '../../../lib/prisma';
 

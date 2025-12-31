@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const isS3Configured = !!(
   process.env.AWS_ACCESS_KEY_ID &&
@@ -18,6 +19,12 @@ const s3Client = isS3Configured ? new S3Client({
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'rogue-documents';
 
+export function generateDocumentKey(investmentId: string, fileName: string): string {
+  const timestamp = Date.now();
+  const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  return `investments/${investmentId}/${timestamp}-${sanitizedFileName}`;
+}
+
 export async function generatePresignedUploadUrl(
   key: string,
   contentType: string
@@ -32,7 +39,7 @@ export async function generatePresignedUploadUrl(
     ContentType: contentType,
   });
 
-  const url = await s3Client.presignedUrl(command, { expiresIn: 3600 });
+  const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
   return { url, key };
 }
 
@@ -46,7 +53,7 @@ export async function generatePresignedDownloadUrl(key: string): Promise<string>
     Key: key,
   });
 
-  return s3Client.presignedUrl(command, { expiresIn: 3600 });
+  return getSignedUrl(s3Client, command, { expiresIn: 3600 });
 }
 
 export { s3Client, BUCKET_NAME, isS3Configured };

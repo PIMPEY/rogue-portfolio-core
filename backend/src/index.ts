@@ -254,7 +254,7 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
       await prisma.document.create({
         data: {
           investmentId: createdInvestment.id,
-          type: 'IC_MEMO',
+          type: 'OTHER',
           versionType: 'INITIAL',
           filePath: file.filePath,
           fileName: file.fileName,
@@ -446,7 +446,7 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`Server address: http://localhost:${PORT}`);
 });

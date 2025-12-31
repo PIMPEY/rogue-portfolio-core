@@ -1,4 +1,3 @@
-import { NextResponse } from 'express';
 import { prisma } from '../../../lib/prisma';
 
 export async function handler(req: any, res: any) {
