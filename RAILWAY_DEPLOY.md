@@ -2,16 +2,24 @@
 
 ## Required Environment Variables
 
-### Backend Service
+### Backend Service - MINIMUM (Required)
 ```
 DATABASE_URL=postgresql://user:pass@host:5432/dbname
-PORT=3001
-NODE_ENV=production
+```
+
+### Backend Service - OPTIONAL (Add as needed)
+```
+# AI Document Review (optional)
 OPENAI_API_KEY=sk-...
+
+# API Authentication (optional)
+API_TOKEN=your-secret-token
+
+# S3 Document Storage (optional)
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=us-east-1
-AWS_S3_BUCKET=your-bucket-name
+S3_BUCKET_NAME=your-bucket-name
 ```
 
 ### Frontend Service
