@@ -8,10 +8,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "echo '🔄 Running database migrations...' && prisma migrate deploy && echo '✅ Migrations complete!' && echo '🚀 Starting server...' && node dist/index.js",
+    "start": "echo '🔄 Running database migrations...' && (prisma migrate deploy || echo '⚠️  Migration failed, starting server anyway...') && echo '🚀 Starting server...' && node dist/index.js",
     "start:dev": "node dist/index.js",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
+    "migrate:resolve": "prisma migrate resolve --rolled-back",
     "generate": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate"

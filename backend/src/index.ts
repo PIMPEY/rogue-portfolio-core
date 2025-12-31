@@ -27,8 +27,14 @@ console.log('🗄️  Database URL configured:', process.env.DATABASE_URL ? '✅
 app.use(cors());
 app.use(express.json());
 
+// Simple health check that works even before database connection
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  console.log('💓 Health check requested');
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    message: 'Backend is running'
+  });
 });
 
 app.post('/api/documents/presigned-url', asyncHandler(presignedUrlHandler));
@@ -455,42 +461,44 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Test database connection before starting server
+// Start server and test database connection
 async function startServer() {
+  console.log('🚀 Starting HTTP server...');
+  
+  const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log('✅ Backend server running on port', PORT);
+    console.log('🌐 Server address: http://0.0.0.0:' + PORT);
+    console.log('🏥 Health check: http://0.0.0.0:' + PORT + '/health');
+  });
+
+  server.on('error', (err: any) => {
+    console.error('❌ Server error:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+  });
+
+  // Test database connection AFTER server starts
   try {
     console.log('🔍 Testing database connection...');
     await prisma.$connect();
     console.log('✅ Database connected successfully!');
-    
-    const server = app.listen(Number(PORT), '0.0.0.0', () => {
-      console.log('✅ Backend server running on port', PORT);
-      console.log('🌐 Server address: http://0.0.0.0:' + PORT);
-      console.log('🏥 Health check: http://0.0.0.0:' + PORT + '/health');
-    });
-
-    server.on('error', (err: any) => {
-      console.error('❌ Server error:', err);
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-      }
-      process.exit(1);
-    });
-
-    // Graceful shutdown
-    process.on('SIGTERM', async () => {
-      console.log('👋 SIGTERM received, closing server...');
-      await prisma.$disconnect();
-      server.close(() => {
-        console.log('✅ Server closed');
-        process.exit(0);
-      });
-    });
-
   } catch (error) {
     console.error('❌ Failed to connect to database:', error);
     console.error('📋 DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET');
-    process.exit(1);
+    console.error('⚠️  Server is running but database is unavailable!');
   }
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('👋 SIGTERM received, closing server...');
+    await prisma.$disconnect();
+    server.close(() => {
+      console.log('✅ Server closed');
+      process.exit(0);
+    });
+  });
 }
 
 startServer().catch((err) => {
