@@ -37,21 +37,32 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Clear database endpoint (for testing only)
+app.post('/api/clear-db', asyncHandler(async (req, res) => {
+  console.log('🗑️  Clear database endpoint called');
+  
+  try {
+    // Delete in correct order due to foreign keys
+    await prisma.forecastMetric.deleteMany();
+    await prisma.forecast.deleteMany();
+    await prisma.flag.deleteMany();
+    await prisma.founderUpdate.deleteMany();
+    await prisma.cashflow.deleteMany();
+    await prisma.founder.deleteMany();
+    await prisma.investment.deleteMany();
+    
+    console.log('✅ Database cleared');
+    res.json({ success: true, message: 'Database cleared successfully' });
+  } catch (error: any) {
+    console.error('Clear database error:', error);
+    res.status(500).json({ success: false, message: `Failed to clear database: ${error.message}` });
+  }
+}));
+
 // Seed endpoint for adding demo data
 app.post('/api/seed', asyncHandler(async (req, res) => {
   console.log('🌱 Seed endpoint called');
   
-  // Check if database already has data
-  const existingCount = await prisma.investment.count();
-  if (existingCount > 0) {
-    console.log(`⚠️  Database already has ${existingCount} investments`);
-    return res.json({ 
-      success: true, 
-      message: `Database already has ${existingCount} investments. No seeding needed.`,
-      count: existingCount 
-    });
-  }
-
   // Run seed using tsx (to avoid TypeScript compilation issues)
   const { exec } = require('child_process');
   const util = require('util');

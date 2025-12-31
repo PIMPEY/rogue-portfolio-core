@@ -23,21 +23,17 @@ async function seedProduction() {
 
   // Check if database already has data
   const existingCount = await prisma.investment.count();
-  const targetCount = 20;
   
-  if (existingCount >= targetCount) {
+  if (existingCount > 0) {
     console.log(`⚠️  Database already has ${existingCount} investments`);
-    console.log('💡 Skipping seed to avoid duplicates');
-    return { success: true, message: `Database already has ${existingCount} investments`, count: existingCount };
+    console.log('💡 Skipping seed to avoid duplicates. Call /api/clear-db first if you want to reseed.');
+    return { success: true, message: `Database already has ${existingCount} investments. Call /api/clear-db to reset.`, count: existingCount };
   }
-  
-  const toCreate = targetCount - existingCount;
-  console.log(`📊 Found ${existingCount} existing investments. Will create ${toCreate} more to reach ${targetCount} total.`);
 
+  console.log('📊 Creating 20 demo investments...');
   let createdCount = 0;
-  const startIndex = existingCount; // Start from where we left off
 
-  for (let i = startIndex; i < targetCount; i++) {
+  for (let i = 0; i < 20; i++) {
     const companyName = companyNames[i];
     const sector = sectors[i % sectors.length];
     const stage = stages[i % stages.length];
