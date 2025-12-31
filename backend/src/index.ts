@@ -37,6 +37,27 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Seed endpoint for adding demo data
+app.post('/api/seed', asyncHandler(async (req, res) => {
+  console.log('🌱 Seed endpoint called');
+  
+  // Check if database already has data
+  const existingCount = await prisma.investment.count();
+  if (existingCount > 0) {
+    console.log(`⚠️  Database already has ${existingCount} investments`);
+    return res.json({ 
+      success: true, 
+      message: `Database already has ${existingCount} investments. No seeding needed.`,
+      count: existingCount 
+    });
+  }
+
+  // Import and run seed
+  const { seedProduction } = await import('../prisma/seed-production');
+  const result = await seedProduction();
+  res.json(result);
+}));
+
 app.post('/api/documents/presigned-url', asyncHandler(presignedUrlHandler));
 app.post('/api/documents/upload-complete', asyncHandler(uploadCompleteHandler));
 app.post('/api/review/start', asyncHandler(startReviewHandler));

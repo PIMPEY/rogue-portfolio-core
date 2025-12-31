@@ -1,0 +1,182 @@
+import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage, FlagType, MetricType, CashflowType } from '@prisma/client';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const prisma = new PrismaClient();
+
+const sectors = ['SaaS', 'Fintech', 'Healthcare', 'E-commerce', 'AI/ML', 'ClimateTech', 'EdTech', 'Cybersecurity'];
+const stages = [InvestmentStage.PRE_SEED, InvestmentStage.SEED, InvestmentStage.SERIES_A, InvestmentStage.SERIES_B];
+const investmentTypes = [InvestmentType.SAFE, InvestmentType.CLN, InvestmentType.EQUITY];
+const geographies = ['US', 'GB', 'DE', 'FR', 'ES', 'IT', 'NL', 'SE'];
+
+const companyNames = [
+  'CloudSync AI', 'PayFlow Pro', 'MediTrack', 'ShopGenius', 'NeuralNet Labs',
+  'GreenEnergy Co', 'LearnFast', 'SecureShield', 'DataPulse', 'FinTech Hub',
+  'HealthFirst', 'RetailMax', 'AutoML Systems', 'CleanWater Tech', 'EduSpark',
+  'CyberGuard', 'CloudScale', 'PayStream', 'MediConnect', 'SmartRetail'
+];
+
+async function seedProduction() {
+  console.log('🌱 Starting production seed...');
+  console.log('⚠️  This will add demo data to the database');
+
+  // Check if database already has data
+  const existingCount = await prisma.investment.count();
+  if (existingCount > 0) {
+    console.log(`⚠️  Database already has ${existingCount} investments`);
+    console.log('💡 Skipping seed to avoid duplicates');
+    return { success: true, message: `Database already has ${existingCount} investments`, count: existingCount };
+  }
+
+  let createdCount = 0;
+
+  for (let i = 0; i < 20; i++) {
+    const companyName = companyNames[i];
+    const sector = sectors[i % sectors.length];
+    const stage = stages[i % stages.length];
+    const investmentType = investmentTypes[i % investmentTypes.length];
+    const geography = geographies[i % geographies.length];
+    const committedCapitalLcl = 500000 + Math.random() * 2000000;
+    const investmentExecutionDate = new Date(2024, Math.floor(Math.random() * 12), 1);
+    const icApprovalDate = new Date(investmentExecutionDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const icReference = String(i + 1).padStart(5, '0');
+
+    const investment = await prisma.investment.create({
+      data: {
+        icReference,
+        icApprovalDate,
+        investmentExecutionDate,
+        dealOwner: 'PJI',
+        companyName,
+        sector,
+        geography,
+        stage,
+        investmentType,
+        committedCapitalLcl,
+        deployedCapitalLcl: committedCapitalLcl,
+        ownershipPercent: investmentType === InvestmentType.EQUITY ? 5 + Math.random() * 15 : null,
+        localCurrency: 'USD',
+        investmentFxRate: 1.08,
+        investmentFxSource: 'ECB',
+        valuationFxRate: 1.08,
+        valuationFxSource: 'ECB',
+        roundSizeEur: committedCapitalLcl * 1.08 * (2 + Math.random()),
+        currentFairValueEur: committedCapitalLcl * 1.08,
+        status: InvestmentStatus.ACTIVE,
+        founders: {
+          create: {
+            name: `Founder ${i + 1}`,
+            email: `founder${i + 1}@${companyName.toLowerCase().replace(/\s/g, '')}.com`
+          }
+        },
+        cashflows: {
+          create: {
+            type: CashflowType.INITIAL_INVESTMENT,
+            amountLcl: committedCapitalLcl,
+            amountEur: committedCapitalLcl * 1.08,
+            date: investmentExecutionDate,
+            description: 'Initial investment'
+          }
+        }
+      }
+    });
+
+    console.log(`✓ Created investment: ${companyName}`);
+    createdCount++;
+
+    // Create forecast
+    const forecast = await prisma.forecast.create({
+      data: {
+        investmentId: investment.id,
+        version: 1,
+        startQuarter: investmentExecutionDate,
+        horizonQuarters: 8
+      }
+    });
+
+    const baseRevenue = 10000 + Math.random() * 50000;
+    const baseBurn = 50000 + Math.random() * 100000;
+    const baseTraction = 100 + Math.random() * 1000;
+
+    // Create forecast quarters (Base, Upside, Downside)
+    for (let q = 0; q < 8; q++) {
+      const growthFactor = 1 + (q * 0.15);
+      
+      await prisma.forecastQuarter.createMany({
+        data: [
+          {
+            forecastId: forecast.id,
+            quarterIndex: q,
+            scenario: 'BASE',
+            revenue: baseRevenue * growthFactor,
+            burn: baseBurn * (1 - q * 0.05),
+            traction: baseTraction * growthFactor * 1.2
+          },
+          {
+            forecastId: forecast.id,
+            quarterIndex: q,
+            scenario: 'UPSIDE',
+            revenue: baseRevenue * growthFactor * 1.3,
+            burn: baseBurn * (1 - q * 0.05),
+            traction: baseTraction * growthFactor * 1.5
+          },
+          {
+            forecastId: forecast.id,
+            quarterIndex: q,
+            scenario: 'DOWNSIDE',
+            revenue: baseRevenue * growthFactor * 0.7,
+            burn: baseBurn * (1 - q * 0.05) * 1.1,
+            traction: baseTraction * growthFactor * 0.9
+          }
+        ]
+      });
+    }
+
+    // Add some flags for variety
+    if (i % 3 === 0) {
+      await prisma.flag.create({
+        data: {
+          investmentId: investment.id,
+          type: FlagType.RUNWAY_SHORT,
+          severity: i % 2 === 0 ? 'HIGH' : 'MEDIUM',
+          description: 'Low runway - requires monitoring',
+          status: 'ACTIVE'
+        }
+      });
+    }
+
+    if (i % 5 === 0) {
+      await prisma.flag.create({
+        data: {
+          investmentId: investment.id,
+          type: FlagType.VALUATION_CONCERN,
+          severity: 'MEDIUM',
+          description: 'Recent market conditions affecting valuation',
+          status: 'ACTIVE'
+        }
+      });
+    }
+  }
+
+  console.log(`✅ Successfully seeded ${createdCount} investments`);
+  return { success: true, message: `Successfully seeded ${createdCount} investments`, count: createdCount };
+}
+
+// Run if called directly
+if (require.main === module) {
+  seedProduction()
+    .then((result) => {
+      console.log(result);
+      process.exit(0);
+    })
+    .catch((e) => {
+      console.error('❌ Seed failed:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
+
+export { seedProduction };
