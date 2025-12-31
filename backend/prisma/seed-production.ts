@@ -109,9 +109,7 @@ async function seedProduction() {
           forecastId: forecast.id,
           metric: MetricType.REVENUE,
           quarterIndex: q,
-          baseValue: baseRevenue * growthFactor,
-          upsideValue: baseRevenue * growthFactor * 1.3,
-          downsideValue: baseRevenue * growthFactor * 0.7
+          value: baseRevenue * growthFactor
         }
       });
 
@@ -121,9 +119,7 @@ async function seedProduction() {
           forecastId: forecast.id,
           metric: MetricType.BURN,
           quarterIndex: q,
-          baseValue: baseBurn * (1 - q * 0.05),
-          upsideValue: baseBurn * (1 - q * 0.05),
-          downsideValue: baseBurn * (1 - q * 0.05) * 1.1
+          value: baseBurn * (1 - q * 0.05)
         }
       });
 
@@ -133,9 +129,7 @@ async function seedProduction() {
           forecastId: forecast.id,
           metric: MetricType.TRACTION,
           quarterIndex: q,
-          baseValue: baseTraction * growthFactor * 1.2,
-          upsideValue: baseTraction * growthFactor * 1.5,
-          downsideValue: baseTraction * growthFactor * 0.9
+          value: baseTraction * growthFactor * 1.2
         }
       });
     }
