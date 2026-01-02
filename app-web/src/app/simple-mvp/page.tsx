@@ -19,6 +19,22 @@ interface AnalysisResult {
   risks: string[];
   opportunities: string[];
   summary: string;
+  extractedData?: {
+    geography?: string;
+    investmentType?: string;
+    ownershipPercent?: number;
+    coInvestors?: string;
+    hasBoardSeat?: boolean;
+    hasProRataRights?: boolean;
+    hasAntiDilutionProtection?: boolean;
+    roundSizeEur?: number;
+    enterpriseValueEur?: number;
+  };
+  dataQuality?: {
+    confidence: number;
+    missingFields: string[];
+    warnings: string[];
+  };
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -40,6 +56,7 @@ export default function SimpleMVP() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showReviewPopup, setShowReviewPopup] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setInvestment({ ...investment, [e.target.name]: e.target.value });
@@ -152,9 +169,11 @@ export default function SimpleMVP() {
         const errorData = await response.json();
         const errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
         throw new Error(errorMessage);
-      }
 
       const result = await response.json();
+      setSuccess('Investment created successfully! ID: ' + result.id);
+      
+      // Clear form after successful creation
       setInvestment({
         companyName: '',
         sector: '',
@@ -215,6 +234,70 @@ export default function SimpleMVP() {
       setError('Failed to analyze: ' + err.message);
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const createAndAnalyze = async () => {
+    if (!investment.companyName || !investment.committedCapital || !investment.localEquivalent) {
+      setError('Please fill in all required fields (Company Name, Committed Capital, and Local Equivalent)');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${BACKEND_URL}/api/investments/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          investment: {
+            ...investment,
+            committedCapitalLcl: parseFloat(investment.committedCapital),
+            currentFairValueEur: parseFloat(investment.localEquivalent),
+            icApprovalDate: new Date().toISOString(),
+            investmentExecutionDate: new Date().toISOString(),
+            icReference: `IC-${Date.now()}`,
+          },
+          files: documents.map((doc) => ({
+            fileName: doc.fileName,
+            fileSize: doc.fileSize,
+            filePath: `local://${doc.fileName}`,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      setSuccess('Investment created successfully! ID: ' + result.id);
+
+      if (documents.length > 0) {
+        await analyzeWithChatGPT();
+        setShowReviewPopup(true);
+      } else {
+        setInvestment({
+          companyName: '',
+          sector: '',
+          stage: 'SEED',
+          committedCapital: '',
+          currency: 'EUR',
+          localEquivalent: '',
+        });
+        setDocuments([]);
+        setAnalysis(null);
+      }
+    } catch (err: any) {
+      setError('Failed to create investment: ' + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -287,7 +370,7 @@ export default function SimpleMVP() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Name <span className="text-red-500">*</span>
+                  Company Name (legal entity) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -303,14 +386,34 @@ export default function SimpleMVP() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Sector
                 </label>
-                <input
-                  type="text"
+                <select
                   name="sector"
                   value={investment.sector}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., SaaS, Fintech"
-                />
+                >
+                  <option value="">Select a sector</option>
+                  <option value="AI and ML">AI and ML</option>
+                  <option value="Fintech">Fintech</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="SaaS">SaaS</option>
+                  <option value="Consumer Tech">Consumer Tech</option>
+                  <option value="E-commerce">E-commerce</option>
+                  <option value="Cybersecurity">Cybersecurity</option>
+                  <option value="Cloud">Cloud</option>
+                  <option value="Data Analytics">Data Analytics</option>
+                  <option value="CleanTech">CleanTech</option>
+                  <option value="EdTech">EdTech</option>
+                  <option value="Logistics">Logistics</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Gaming">Gaming</option>
+                  <option value="Robotics">Robotics</option>
+                  <option value="Blockchain">Blockchain</option>
+                  <option value="Telecom">Telecom</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="AgriTech">AgriTech</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div>
@@ -333,7 +436,7 @@ export default function SimpleMVP() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Committed Capital (€) <span className="text-red-500">*</span>
+                  Committed Capital (Local) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -344,6 +447,47 @@ export default function SimpleMVP() {
                   placeholder="e.g., 500000"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Currency
+                </label>
+                <select
+                  name="currency"
+                  value={investment.currency}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                >
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CHF">CHF</option>
+                  <option value="SEK">SEK</option>
+                  <option value="NOK">NOK</option>
+                  <option value="DKK">DKK</option>
+                  <option value="PLN">PLN</option>
+                  <option value="CZK">CZK</option>
+                  <option value="HUF">HUF</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Local Equivalent (EUR) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="localEquivalent"
+                  value={investment.localEquivalent}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="e.g., 500000"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
             </div>
 
             <div>
@@ -448,19 +592,11 @@ export default function SimpleMVP() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={createInvestment}
-                disabled={uploading || !investment.companyName || !investment.committedCapital}
+                onClick={createAndAnalyze}
+                disabled={uploading || !investment.companyName || !investment.committedCapital || !investment.localEquivalent}
                 className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {uploading ? 'Creating...' : 'Create Investment'}
-              </button>
-
-              <button
-                onClick={analyzeWithChatGPT}
-                disabled={analyzing || documents.length === 0}
-                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {analyzing ? 'Analyzing...' : 'Analyze with ChatGPT'}
+                {uploading ? 'Creating & Analyzing...' : 'Create Investment & Analyze Documents'}
               </button>
 
               <button
@@ -580,13 +716,204 @@ export default function SimpleMVP() {
               </div>
             </div>
           )}
+
+          {showReviewPopup && analysis && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">Investment Review</h2>
+                    <button
+                      onClick={() => setShowReviewPopup(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {analysis.dataQuality && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Data Quality Assessment</h3>
+                      <div className={`p-4 rounded-md ${
+                        analysis.dataQuality.confidence >= 80 ? 'bg-green-50 border border-green-200' :
+                        analysis.dataQuality.confidence >= 60 ? 'bg-yellow-50 border border-yellow-200' :
+                        'bg-red-50 border border-red-200'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Confidence Score</span>
+                          <span className={`text-2xl font-bold ${
+                            analysis.dataQuality.confidence >= 80 ? 'text-green-600' :
+                            analysis.dataQuality.confidence >= 60 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {analysis.dataQuality.confidence}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              analysis.dataQuality.confidence >= 80 ? 'bg-green-600' :
+                              analysis.dataQuality.confidence >= 60 ? 'bg-yellow-600' :
+                              'bg-red-600'
+                            }`}
+                            style={{ width: `${analysis.dataQuality.confidence}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {analysis.dataQuality.missingFields.length > 0 && (
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                          <h4 className="font-medium text-yellow-800 mb-2">Missing Fields</h4>
+                          <ul className="list-disc list-inside text-yellow-700">
+                            {analysis.dataQuality.missingFields.map((field, idx) => (
+                              <li key={idx}>{field}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {analysis.dataQuality.warnings.length > 0 && (
+                        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
+                          <h4 className="font-medium text-orange-800 mb-2">Warnings</h4>
+                          <ul className="list-disc list-inside text-orange-700">
+                            {analysis.dataQuality.warnings.map((warning, idx) => (
+                              <li key={idx}>{warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {analysis.extractedData && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Extracted Deal Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {analysis.extractedData.geography && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Geography</p>
+                            <p className="font-medium">{analysis.extractedData.geography}</p>
+                          </div>
+                        )}
+                        {analysis.extractedData.investmentType && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Investment Type</p>
+                            <p className="font-medium">{analysis.extractedData.investmentType}</p>
+                          </div>
+                        )}
+                        {analysis.extractedData.ownershipPercent && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Ownership %</p>
+                            <p className="font-medium">{analysis.extractedData.ownershipPercent}%</p>
+                          </div>
+                        )}
+                        {analysis.extractedData.coInvestors && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Co-Investors</p>
+                            <p className="font-medium">{analysis.extractedData.coInvestors}</p>
+                          </div>
+                        )}
+                        {analysis.extractedData.roundSizeEur && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Round Size</p>
+                            <p className="font-medium">€{analysis.extractedData.roundSizeEur.toLocaleString()}</p>
+                          </div>
+                        )}
+                        {analysis.extractedData.enterpriseValueEur && (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">Enterprise Value</p>
+                            <p className="font-medium">€{analysis.extractedData.enterpriseValueEur.toLocaleString()}</p>
+                          </div>
+                        )}
+                        <div className="p-3 bg-gray-50 rounded-md">
+                          <p className="text-sm text-gray-600">Board Seat</p>
+                          <p className="font-medium">{analysis.extractedData.hasBoardSeat ? 'Yes' : 'No'}</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-md">
+                          <p className="text-sm text-gray-600">Pro-Rata Rights</p>
+                          <p className="font-medium">{analysis.extractedData.hasProRataRights ? 'Yes' : 'No'}</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-md">
+                          <p className="text-sm text-gray-600">Anti-Dilution Protection</p>
+                          <p className="font-medium">{analysis.extractedData.hasAntiDilutionProtection ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Summary</h3>
+                    <p className="text-gray-700 bg-gray-50 p-4 rounded-md">{analysis.summary}</p>
+                  </div>
+
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Metrics</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-md">
+                        <p className="text-sm text-gray-600">Revenue</p>
+                        <p className="text-xl font-bold text-blue-600">
+                          €{analysis.metrics.revenue.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-md">
+                        <p className="text-sm text-gray-600">Growth</p>
+                        <p className="text-xl font-bold text-green-600">
+                          {analysis.metrics.growth}%
+                        </p>
+                      </div>
+                      <div className="bg-yellow-50 p-4 rounded-md">
+                        <p className="text-sm text-gray-600">Burn</p>
+                        <p className="text-xl font-bold text-yellow-600">
+                          €{analysis.metrics.burn.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-md">
+                        <p className="text-sm text-gray-600">Runway</p>
+                        <p className="text-xl font-bold text-purple-600">
+                          {analysis.metrics.runway} months
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => {
+                        setShowReviewPopup(false);
+                        setInvestment({
+                          companyName: '',
+                          sector: '',
+                          stage: 'SEED',
+                          committedCapital: '',
+                          currency: 'EUR',
+                          localEquivalent: '',
+                        });
+                        setDocuments([]);
+                        setAnalysis(null);
+                        setSuccess('Investment completed successfully!');
+                      }}
+                      className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                    >
+                      Confirm & Complete
+                    </button>
+                    <button
+                      onClick={() => setShowReviewPopup(false)}
+                      className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Edit Manually
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-
 
 
 
