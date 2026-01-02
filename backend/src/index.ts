@@ -316,7 +316,9 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
       investmentType: investment.investmentType || "EQUITY",
       committedCapitalLcl: investment.committedCapitalLcl || 0,
       currentFairValueEur: investment.currentFairValueEur || investment.committedCapitalLcl || 0,
-    },
+      sector: investment.sector || "OTHER",
+      stage: investment.stage || "SEED",
+    }
   });
 
   if (files && files.length > 0) {
@@ -563,3 +565,5 @@ startServer().catch((err) => {
   console.error('❌ Fatal error starting server:', err);
   process.exit(1);
 });
+
+
