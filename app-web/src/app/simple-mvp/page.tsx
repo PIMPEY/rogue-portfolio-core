@@ -158,7 +158,7 @@ export default function SimpleMVP() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.error?.message \|\| errorData.error \|\| errorData.message \|\| JSON.stringify\(errorData\);
+        const errorMessage = errorData.error?.message || errorData.error || errorData.message || JSON.stringify(errorData);
         throw new Error(errorMessage);
       }
 
@@ -265,7 +265,7 @@ export default function SimpleMVP() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.error?.message \|\| errorData.error \|\| errorData.message \|\| JSON.stringify\(errorData\);
+        const errorMessage = errorData.error?.message || errorData.error || errorData.message || JSON.stringify(errorData);
         throw new Error(errorMessage);
       }
 
