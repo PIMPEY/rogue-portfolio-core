@@ -155,9 +155,6 @@ export default function SimpleMVP() {
       }
 
       const result = await response.json();
-      setSuccess('Investment created successfully! ID: ' + result.id);
-      
-      // Clear form after successful creation
       setInvestment({
         companyName: '',
         sector: '',
@@ -347,8 +344,9 @@ export default function SimpleMVP() {
                   placeholder="e.g., 500000"
                 />
               </div>
+            </div>
 
-              <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Documents
               </label>
@@ -587,6 +585,7 @@ export default function SimpleMVP() {
     </div>
   );
 }
+
 
 
 
