@@ -309,6 +309,13 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
     data: {
       ...investment,
       icReference: investment.icReference || `IC-${Date.now()}`,
+      icApprovalDate: investment.icApprovalDate || new Date(),
+      investmentExecutionDate: investment.investmentExecutionDate || new Date(),
+      dealOwner: investment.dealOwner || "Unknown",
+      geography: investment.geography || "Unknown",
+      investmentType: investment.investmentType || "EQUITY",
+      committedCapitalLcl: investment.committedCapitalLcl || 0,
+      currentFairValueEur: investment.currentFairValueEur || investment.committedCapitalLcl || 0,
     },
   });
 
