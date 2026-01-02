@@ -150,8 +150,8 @@ export default function SimpleMVP() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create investment');
-      }
+        const errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
+        throw new Error(errorMessage);
 
       const result = await response.json();
       setSuccess('Investment created successfully! ID: ' + result.id);
@@ -601,3 +601,4 @@ export default function SimpleMVP() {
     </div>
   );
 }
+
