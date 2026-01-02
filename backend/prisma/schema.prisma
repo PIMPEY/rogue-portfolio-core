@@ -7,322 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum InvestmentType {
-  SAFE
-  CLN
-  EQUITY
+//
+// Enums
+//
+
+enum Sector {
+  MEDTECH
+  FINTECH
+  AI_INFRA
+  SAAS
+  HEALTHCARE
+  CLIMATE
+  CONSUMER
+  INDUSTRIAL
   OTHER
 }
 
 enum InvestmentStatus {
-  PENDING_REVIEW
-  ACTIVE
-  EXITED
-  WRITTEN_OFF
+  GREEN
+  AMBER
+  RED
 }
 
-enum InvestmentStage {
-  PRE_SEED
-  SEED
-  SERIES_A
-  SERIES_B
-  SERIES_C
-  SERIES_D_PLUS
-  GROWTH
+enum InstrumentType {
+  EQUITY
+  SAFE
+  CONVERTIBLE_NOTE
   OTHER
 }
 
 enum CashflowType {
-  INITIAL_INVESTMENT
+  INVESTMENT
   FOLLOW_ON
   DISTRIBUTION
-  PARTIAL_EXIT
+  FEE
+  SECONDARY_BUY
+  SECONDARY_SELL
+  CONVERSION
+  OTHER
+}
+
+enum ValuationMethod {
+  ROUND_PRICED
+  INTERNAL_MARK
+  DCF
+  MULTIPLE
+  OTHER
 }
 
 enum DocumentType {
   PITCH_DECK
-  FINANCIAL_MODEL
-  HISTORICAL_FINANCIALS
-  LEGAL_SHAREHOLDING
-  MARKET_RESEARCH
+  FINANCIALS
+  LEGAL
+  BOARD_PACK
+  DATA_ROOM
   OTHER
 }
 
-enum DocumentVersionType {
-  INITIAL
-  REVISION
+enum StorageProvider {
+  S3
 }
 
-enum AuditAction {
-  VALUATION_UPDATE
-  INVESTMENT_CREATED
-  INVESTMENT_UPDATED
-  DOCUMENT_UPLOADED
-  CASHFLOW_ADDED
-  ACTION_REQUIRED_CREATED
-  ACTION_REQUIRED_UPDATED
-  ACTION_REQUIRED_CLEARED
-}
-
-enum ActionType {
-  SUPPORT
-  FOLLOW_ON
-  MONITOR
-  EXIT_PREPARATION
-}
-
-enum ExitType {
-  M_AND_A
-  SECONDARY
-  IPO
-}
-
-enum ActionStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CLEARED
-}
-
-enum FounderUpdateStatus {
-  SUBMITTED
-  LATE
-  OVERDUE
-}
-
-enum FlagStatus {
-  NEW
-  ACKNOWLEDGED
-  MONITORING
-  RESOLVED
-}
-
-enum FlagType {
-  REVENUE_MISS
-  TRACTION_MISS
-  BURN_SPIKE
-  BURN_CRITICAL
-  RUNWAY_RISK
-  RUNWAY_CRITICAL
-  LATE_UPDATE
-}
-
-enum MetricType {
-  REVENUE
-  BURN
-  TRACTION
-  HEADCOUNT
-}
-
-model Investment {
-  id                        String              @id @default(uuid())
-  
-  icReference               String              @unique
-  icApprovalDate            DateTime
-  investmentExecutionDate   DateTime
-  dealOwner                 String
-  
-  companyName               String
-  sector                    String
-  geography                 String
-  stage                     InvestmentStage
-  
-  investmentType            InvestmentType
-  committedCapitalLcl       Float
-  deployedCapitalLcl        Float               @default(0)
-  ownershipPercent          Float?
-  coInvestors               String?
-  
-  hasBoardSeat              Boolean             @default(false)
-  hasProRataRights          Boolean             @default(false)
-  hasAntiDilutionProtection Boolean             @default(false)
-  
-  localCurrency             String              @default("USD")
-  investmentFxRate          Float               @default(1.0)
-  investmentFxSource        String?
-  valuationFxRate           Float               @default(1.0)
-  valuationFxSource         String?
-  
-  roundSizeEur              Float?
-  enterpriseValueEur        Float?
-  currentFairValueEur       Float
-  
-  raisedFollowOnCapital     Boolean             @default(false)
-  clearProductMarketFit     Boolean             @default(false)
-  meaningfulRevenue         Boolean             @default(false)
-  
-  status                    InvestmentStatus    @default(ACTIVE)
-  createdAt                 DateTime            @default(now())
-  updatedAt                 DateTime            @updatedAt
-  
-  founders                  Founder[]
-  forecasts                 Forecast[]
-  founderUpdates            FounderUpdate[]
-  flags                     Flag[]
-  notes                     Note[]
-  cashflows                 Cashflow[]
-  valuations                Valuation[]
-  documents                 Document[]
-  auditLogs                 AuditLog[]
-  actionsRequired           ActionRequired[]
-  reviewJobs                ReviewJob[]
-}
-
-model Founder {
-  id            String      @id @default(uuid())
-  investmentId  String
-  investment    Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  name          String
-  email         String
-  createdAt     DateTime    @default(now())
-}
-
-model Forecast {
-  id              String          @id @default(uuid())
-  investmentId    String
-  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  version         Int
-  startQuarter    DateTime
-  horizonQuarters Int             @default(8)
-  rationale       String?
-  createdAt       DateTime        @default(now())
-  metrics         ForecastMetric[]
-  @@unique([investmentId, version])
-}
-
-model ForecastMetric {
-  id          String      @id @default(uuid())
-  forecastId  String
-  forecast    Forecast    @relation(fields: [forecastId], references: [id], onDelete: Cascade)
-  metric      MetricType
-  quarterIndex Int
-  value       Float
-  createdAt   DateTime    @default(now())
-  @@unique([forecastId, metric, quarterIndex])
-}
-
-model FounderUpdate {
-  id                String              @id @default(uuid())
-  investmentId      String
-  investment        Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  quarterIndex      Int
-  dueDate           DateTime
-  submittedAt       DateTime            @default(now())
-  status            FounderUpdateStatus @default(SUBMITTED)
-  actualRevenue     Float
-  actualBurn        Float
-  actualRunwayMonths Float
-  actualTraction    Float
-  narrativeGood     String?
-  narrativeBad      String?
-  narrativeHelp     String?
-  createdAt         DateTime            @default(now())
-  flags             Flag[]
-  @@unique([investmentId, quarterIndex])
-}
-
-model Flag {
-  id              String          @id @default(uuid())
-  investmentId    String
-  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  founderUpdateId String?
-  founderUpdate   FounderUpdate?  @relation(fields: [founderUpdateId], references: [id], onDelete: SetNull)
-  type            FlagType
-  metric          MetricType?
-  threshold       String
-  actualValue     Float?
-  forecastValue   Float?
-  deltaPct        Float?
-  status          FlagStatus      @default(NEW)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  resolvedAt      DateTime?
-  resolutionNote  String?
-}
-
-model Note {
-  id             String      @id @default(uuid())
-  investmentId   String
-  investment     Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  authorUserId   String
-  body           String
-  createdAt      DateTime    @default(now())
-}
-
-model Cashflow {
-  id              String        @id @default(uuid())
-  investmentId    String
-  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  type            CashflowType
-  amountLcl       Float?
-  amountEur       Float
-  date            DateTime
-  description     String?
-  createdAt       DateTime      @default(now())
-}
-
-model Valuation {
-  id              String        @id @default(uuid())
-  investmentId    String
-  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  fairValueEur    Float
-  valuationDate   DateTime
-  rationale       String
-  changedBy       String
-  createdAt       DateTime        @default(now())
-}
-
-model Document {
-  id              String              @id @default(uuid())
-  investmentId    String
-  investment      Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  type            DocumentType
-  versionType     DocumentVersionType
-  filePath        String
-  storageUrl      String
-  fileName        String
-  fileSize        Int
-  contentType     String
-  checksum        String
-  status          String              @default("uploaded")
-  uploadedAt      DateTime            @default(now())
-  uploadedBy      String
-  isCurrent       Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-}
-
-model AuditLog {
-  id                String      @id @default(uuid())
-  investmentId      String
-  investment        Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  actionRequiredId  String?
-  action            AuditAction
-  fieldName         String?
-  oldValue          String?
-  newValue          String?
-  rationale         String?
-  changedBy         String
-  createdAt         DateTime    @default(now())
-}
-
-model ActionRequired {
-  id                      String        @id @default(uuid())
-  investmentId            String
-  investment              Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  type                    ActionType
-  actionOwner             String
-  reviewDate              DateTime
-  notes                   String
-  status                  ActionStatus  @default(PENDING)
-  exitType                ExitType?
-  indicativeValuationMin  Float?
-  indicativeValuationMax  Float?
-  knownAcquirers          String?
-  clearedAt               DateTime?
-  clearedBy               String?
-  clearRationale          String?
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+enum AttachmentTargetType {
+  COMPANY
+  INVESTMENT
+  REVIEW_JOB
+  FOUNDER_UPDATE
+  NOTE
 }
 
 enum ReviewJobStatus {
@@ -332,19 +83,411 @@ enum ReviewJobStatus {
   FAILED
 }
 
+enum ActionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+}
+
+enum ForecastSource {
+  MANUAL
+  AI_EXTRACTED
+  FOUNDER_UPDATE
+}
+
+enum PeriodType {
+  QUARTER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+//
+// Core
+//
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  createdAt DateTime @default(now())
+
+  // relations
+  uploadedDocumentVersions DocumentVersion[]
+  createdTermVersions      InvestmentTermsVersion[]
+  statusEvents             StatusEvent[]
+  auditLogs                AuditLog[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  sector      Sector   @default(OTHER)
+  country     String?
+  website     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  investments Investment[]
+
+  @@index([sector])
+  @@unique([name])
+}
+
+model Investment {
+  id            String            @id @default(cuid())
+  companyId     String
+  label         String?
+  instrumentType InstrumentType   @default(OTHER)
+
+  // latest-state dashboard fields
+  status        InvestmentStatus  @default(GREEN)
+  statusReason  String?
+  ownershipPct  Decimal?          @db.Decimal(10, 6)
+  entryValuation Decimal?         @db.Decimal(18, 2)
+  currency      String?           // original currency if not EUR (e.g., "USD")
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  cashflows     Cashflow[]
+  valuationMarks ValuationMark[]
+  termVersions  InvestmentTermsVersion[]
+  statusEvents  StatusEvent[]
+  actions       ActionRequired[]
+  reviewJobs    ReviewJob[]
+  forecastVersions ForecastVersion[]
+
+  @@index([companyId])
+  @@index([status])
+}
+
+//
+// Versioning / append-only history
+//
+
+model InvestmentTermsVersion {
+  id            String         @id @default(cuid())
+  investmentId  String
+  version       Int
+  instrumentType InstrumentType
+  ownershipPct  Decimal?       @db.Decimal(10, 6)
+  entryValuation Decimal?      @db.Decimal(18, 2)
+  rationale     String?
+  createdAt     DateTime       @default(now())
+  createdByUserId String?
+
+  investment    Investment     @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([investmentId, version])
+  @@index([investmentId, createdAt])
+}
+
+model Cashflow {
+  id            String       @id @default(cuid())
+  investmentId  String
+  date          DateTime
+  type          CashflowType
+  // Convention: negative = cash out, positive = cash in
+  amount        Decimal      @db.Decimal(18, 2)
+  currency      String       // e.g., "EUR", "USD"
+
+  // FX snapshot to EUR (store even if EUR, use 1.0)
+  fxRateToEUR   Decimal      @db.Decimal(18, 8)
+  fxSource      String?
+  fxTimestamp   DateTime?
+
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  investment    Investment   @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, date])
+  @@index([type])
+}
+
+model ValuationMark {
+  id            String         @id @default(cuid())
+  investmentId  String
+  asOfDate      DateTime
+  method        ValuationMethod
+  source        String?
+  confidence    Decimal?       @db.Decimal(4, 3)
+
+  // Store in original currency plus FX snapshot and derived EUR (fast reporting)
+  value         Decimal        @db.Decimal(18, 2)
+  currency      String         // "EUR", "USD", etc.
+  fxRateToEUR   Decimal        @db.Decimal(18, 8)
+  valueEUR      Decimal        @db.Decimal(18, 2)
+
+  createdAt     DateTime       @default(now())
+
+  investment    Investment     @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, asOfDate])
+  @@index([method])
+}
+
+model StatusEvent {
+  id            String           @id @default(cuid())
+  investmentId  String
+  fromStatus    InvestmentStatus
+  toStatus      InvestmentStatus
+  reason        String?
+  createdAt     DateTime         @default(now())
+  createdByUserId String?
+
+  investment    Investment       @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  createdBy     User?            @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([investmentId, createdAt])
+}
+
+//
+// Actions
+//
+
+model ActionRequired {
+  id            String         @id @default(cuid())
+  investmentId  String
+  reviewJobId   String?
+  extractedFactId String?
+
+  title         String
+  description   String?
+  severity      ActionSeverity @default(MEDIUM)
+  owner         String         // single-user MVP; later FK
+  dueDate       DateTime?
+  status        ActionStatus   @default(OPEN)
+  resolutionNote String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  closedAt      DateTime?
+
+  investment    Investment     @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  reviewJob     ReviewJob?     @relation(fields: [reviewJobId], references: [id], onDelete: SetNull)
+  extractedFact ExtractedFact? @relation(fields: [extractedFactId], references: [id], onDelete: SetNull)
+
+  @@index([investmentId, status])
+  @@index([dueDate])
+}
+
+//
+// Documents: logical doc + append-only versions + attach-to-anything
+//
+
+model Document {
+  id        String       @id @default(cuid())
+  title     String?
+  docType   DocumentType @default(OTHER)
+  createdAt DateTime     @default(now())
+
+  versions  DocumentVersion[]
+  attachments DocumentAttachment[]
+
+  @@index([docType])
+}
+
+model DocumentVersion {
+  id            String          @id @default(cuid())
+  documentId    String
+  version       Int
+
+  fileName      String
+  mimeType      String
+  sizeBytes     BigInt
+  checksum      String
+
+  storageProvider StorageProvider @default(S3)
+  storageKey     String
+  pageCount      Int?
+
+  uploadedAt     DateTime        @default(now())
+  uploadedByUserId String?
+
+  document      Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy    User?            @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  reviewJobLinks ReviewJobDocument[]
+  extractedFacts ExtractedFact[]
+
+  @@unique([documentId, version])
+  @@index([checksum])
+}
+
+model DocumentAttachment {
+  id           String               @id @default(cuid())
+  documentId   String
+  targetType   AttachmentTargetType
+  targetId     String               // polymorphic target reference
+  createdAt    DateTime             @default(now())
+
+  document     Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([documentId])
+}
+
+//
+// Reviews: job + join table to specific doc versions + structured facts
+//
+
 model ReviewJob {
-  id                String          @id @default(uuid())
-  investmentId      String
-  investment        Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  status            ReviewJobStatus @default(QUEUED)
-  progress          Int             @default(0)
-  errorMessage      String?
-  resultLocation    String?
-  summaryJson       Json?
-  docChecksums      String
-  reviewConfigVersion String         @default("1.0")
-  createdAt         DateTime        @default(now())
-  startedAt         DateTime?
-  finishedAt        DateTime?
-  retryCount        Int             @default(0)
+  id             String         @id @default(cuid())
+  investmentId   String
+  status         ReviewJobStatus @default(QUEUED)
+
+  promptVersion  String
+  idempotencyKey String         @unique
+
+  resultJson     Json?
+  error          String?
+
+  retryCount     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  investment     Investment     @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  documents      ReviewJobDocument[]
+  extractedFacts ExtractedFact[]
+  actions        ActionRequired[]
+
+  @@index([investmentId, status])
+  @@index([createdAt])
+}
+
+model ReviewJobDocument {
+  id               String          @id @default(cuid())
+  reviewJobId      String
+  documentVersionId String
+
+  reviewJob        ReviewJob       @relation(fields: [reviewJobId], references: [id], onDelete: Cascade)
+  documentVersion  DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewJobId, documentVersionId])
+  @@index([documentVersionId])
+}
+
+model ExtractedFact {
+  id              String          @id @default(cuid())
+  reviewJobId     String
+  documentVersionId String?
+
+  // flexible typing
+  factType        String          // e.g., "RUNWAY_MONTHS", "MRR", "RISK"
+  key             String?
+  valueString     String?
+  valueNumber     Decimal?        @db.Decimal(18, 6)
+  valueJson       Json?
+  confidence      Decimal?        @db.Decimal(4, 3)
+  citation        String?         // "Slide 12", "Page 3", etc.
+  createdAt       DateTime        @default(now())
+
+  reviewJob       ReviewJob       @relation(fields: [reviewJobId], references: [id], onDelete: Cascade)
+  documentVersion DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: SetNull)
+
+  actions         ActionRequired[]
+
+  @@index([reviewJobId])
+  @@index([factType])
+}
+
+//
+// Forecasts: append-only versions + quarterly lines
+//
+
+model ForecastVersion {
+  id            String         @id @default(cuid())
+  investmentId  String
+  version       Int
+  isCurrent     Boolean        @default(false)
+  source        ForecastSource @default(MANUAL)
+  createdAt     DateTime       @default(now())
+
+  investment    Investment     @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  lines         ForecastLine[]
+
+  @@unique([investmentId, version])
+  @@index([investmentId, isCurrent])
+}
+
+model ForecastLine {
+  id               String     @id @default(cuid())
+  forecastVersionId String
+  periodStart      DateTime
+  periodType       PeriodType @default(QUARTER)
+  currency         String?    // optional
+
+  revenue          Decimal?   @db.Decimal(18, 2)
+  cogs             Decimal?   @db.Decimal(18, 2)
+  opex             Decimal?   @db.Decimal(18, 2)
+  ebitda           Decimal?   @db.Decimal(18, 2)
+  cash             Decimal?   @db.Decimal(18, 2)
+  headcount        Int?
+  burn             Decimal?   @db.Decimal(18, 2)
+
+  forecastVersion  ForecastVersion @relation(fields: [forecastVersionId], references: [id], onDelete: Cascade)
+
+  @@index([forecastVersionId, periodStart])
+}
+
+//
+// Notes / Founder updates (append-only) – minimal MVP
+//
+
+model Note {
+  id          String   @id @default(cuid())
+  investmentId String?
+  companyId    String?
+  content     String
+  createdAt   DateTime @default(now())
+
+  @@index([investmentId])
+  @@index([companyId])
+}
+
+model FounderUpdate {
+  id          String   @id @default(cuid())
+  companyId   String
+  title       String?
+  content     String
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, createdAt])
+}
+
+//
+// Audit log (append-only)
+//
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  entityType    String
+  entityId      String
+  action        AuditAction
+  changedFields Json?
+  rationale     String?
+  createdAt     DateTime    @default(now())
+  createdByUserId String?
+
+  createdBy     User?       @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
