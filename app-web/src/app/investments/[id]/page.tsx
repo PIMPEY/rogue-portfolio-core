@@ -83,6 +83,7 @@ interface Update {
 }
 
 export default function InvestmentDetail({ params }: { params: Promise<{ id: string }> }) {
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
   const [id, setId] = useState<string>('');
   const [data, setData] = useState<{
     investment: Investment;
@@ -102,7 +103,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/investments/${id}`)
+    fetch(`${BACKEND_URL}/api/investments/${id}`)
       .then(res => {
         if (!res.ok) {
           throw new Error('Investment not found');
