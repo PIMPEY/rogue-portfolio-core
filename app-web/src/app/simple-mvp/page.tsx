@@ -259,7 +259,7 @@ export default function SimpleMVP() {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Simple Investment MVP</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Simple Investment MVP v2</h1>
             <p className="text-gray-600">Create investments and analyze documents with ChatGPT (no AWS required)</p>
           </div>
 
