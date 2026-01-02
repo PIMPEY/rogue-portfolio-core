@@ -307,7 +307,7 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
 
   const createdInvestment = await prisma.investment.create({
     data: {
-      ...investment,
+      companyName: investment.companyName,
       icReference: investment.icReference || `IC-${Date.now()}`,
       icApprovalDate: investment.icApprovalDate || new Date(),
       investmentExecutionDate: investment.investmentExecutionDate || new Date(),
