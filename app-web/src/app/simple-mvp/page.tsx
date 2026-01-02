@@ -30,7 +30,7 @@ export default function SimpleMVP() {
     sector: '',
     stage: 'SEED',
     committedCapital: '',
-    dealOwner: '',
+    currency: 'EUR', localEquivalent: '',
   });
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -162,7 +162,7 @@ export default function SimpleMVP() {
         sector: '',
         stage: 'SEED',
         committedCapital: '',
-        dealOwner: '',
+        currency: 'EUR', localEquivalent: '',
       });
       setDocuments([]);
       setAnalysis(null);
@@ -246,7 +246,7 @@ export default function SimpleMVP() {
       sector: '',
       stage: 'SEED',
       committedCapital: '',
-      dealOwner: '',
+      currency: 'EUR', localEquivalent: '',
     });
     setDocuments([]);
     setAnalysis(null);
@@ -259,8 +259,8 @@ export default function SimpleMVP() {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Simple Investment MVP</h1>
-            <p className="text-gray-600">Create investments and analyze documents with ChatGPT (no AWS required)</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Successful Deal Closed</h1>
+            <p className="text-gray-600">Create and record investments profile with one-click</p>
           </div>
 
           {error && (
@@ -349,17 +349,6 @@ export default function SimpleMVP() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Deal Owner
-                </label>
-                <input
-                  type="text"
-                  name="dealOwner"
-                  value={investment.dealOwner}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., John Doe"
-                />
-              </div>
             </div>
 
             <div>
@@ -601,4 +590,10 @@ export default function SimpleMVP() {
     </div>
   );
 }
+
+
+
+
+
+
 
