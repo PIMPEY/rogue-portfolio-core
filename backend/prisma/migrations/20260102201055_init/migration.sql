@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "InvestmentType" AS ENUM ('SAFE', 'CLN', 'EQUITY', 'OTHER');
 
@@ -14,7 +11,7 @@ CREATE TYPE "InvestmentStage" AS ENUM ('PRE_SEED', 'SEED', 'SERIES_A', 'SERIES_B
 CREATE TYPE "CashflowType" AS ENUM ('INITIAL_INVESTMENT', 'FOLLOW_ON', 'DISTRIBUTION', 'PARTIAL_EXIT');
 
 -- CreateEnum
-CREATE TYPE "DocumentType" AS ENUM ('PITCH_DECK', 'BASE_CASE_MODEL', 'IC_MEMO', 'BUSINESS_PLAN');
+CREATE TYPE "DocumentType" AS ENUM ('PITCH_DECK', 'FINANCIAL_MODEL', 'HISTORICAL_FINANCIALS', 'LEGAL_SHAREHOLDING', 'MARKET_RESEARCH', 'OTHER');
 
 -- CreateEnum
 CREATE TYPE "DocumentVersionType" AS ENUM ('INITIAL', 'REVISION');
@@ -42,6 +39,9 @@ CREATE TYPE "FlagType" AS ENUM ('REVENUE_MISS', 'TRACTION_MISS', 'BURN_SPIKE', '
 
 -- CreateEnum
 CREATE TYPE "MetricType" AS ENUM ('REVENUE', 'BURN', 'TRACTION', 'HEADCOUNT');
+
+-- CreateEnum
+CREATE TYPE "ReviewJobStatus" AS ENUM ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED');
 
 -- CreateTable
 CREATE TABLE "Investment" (
@@ -201,8 +201,12 @@ CREATE TABLE "Document" (
     "type" "DocumentType" NOT NULL,
     "versionType" "DocumentVersionType" NOT NULL,
     "filePath" TEXT NOT NULL,
+    "storageUrl" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
     "fileSize" INTEGER NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "checksum" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'uploaded',
     "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "uploadedBy" TEXT NOT NULL,
     "isCurrent" BOOLEAN NOT NULL DEFAULT true,
@@ -247,6 +251,25 @@ CREATE TABLE "ActionRequired" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ActionRequired_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReviewJob" (
+    "id" TEXT NOT NULL,
+    "investmentId" TEXT NOT NULL,
+    "status" "ReviewJobStatus" NOT NULL DEFAULT 'QUEUED',
+    "progress" INTEGER NOT NULL DEFAULT 0,
+    "errorMessage" TEXT,
+    "resultLocation" TEXT,
+    "summaryJson" JSONB,
+    "docChecksums" TEXT NOT NULL,
+    "reviewConfigVersion" TEXT NOT NULL DEFAULT '1.0',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "startedAt" TIMESTAMP(3),
+    "finishedAt" TIMESTAMP(3),
+    "retryCount" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "ReviewJob_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -297,3 +320,5 @@ ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_investmentId_fkey" FOREIGN KEY (
 -- AddForeignKey
 ALTER TABLE "ActionRequired" ADD CONSTRAINT "ActionRequired_investmentId_fkey" FOREIGN KEY ("investmentId") REFERENCES "Investment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- AddForeignKey
+ALTER TABLE "ReviewJob" ADD CONSTRAINT "ReviewJob_investmentId_fkey" FOREIGN KEY ("investmentId") REFERENCES "Investment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
