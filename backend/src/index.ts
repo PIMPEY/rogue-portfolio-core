@@ -334,7 +334,7 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
           fileSize: file.fileSize,
           contentType: file.contentType || 'application/octet-stream',
           checksum: file.checksum || '',
-          uploadedBy: investment.dealOwner,
+          uploadedBy: investment.dealOwner || "Unknown",
           isCurrent: true
         }
       });
