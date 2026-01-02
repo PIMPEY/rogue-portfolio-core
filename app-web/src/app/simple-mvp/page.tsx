@@ -348,11 +348,7 @@ export default function SimpleMVP() {
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-            </div>
-
-            <div>
+              <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Documents
               </label>
@@ -591,6 +587,7 @@ export default function SimpleMVP() {
     </div>
   );
 }
+
 
 
 
