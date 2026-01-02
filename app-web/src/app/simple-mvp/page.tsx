@@ -29,7 +29,7 @@ interface AnalysisResult {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
 
 export default function SimpleMVP() {
   const [investment, setInvestment] = useState({
@@ -56,7 +56,7 @@ export default function SimpleMVP() {
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `File type "${file.type}" is not supported. Please upload PDF, DOC, DOCX, or TXT files.`;
+      return `File type "${file.type}" is not supported. Please upload PDF, DOC, DOCX, TXT, XLS, or XLSX files.`;
     }
     if (file.size > MAX_FILE_SIZE) {
       return `File "${file.name}" exceeds the 10MB limit.`;
