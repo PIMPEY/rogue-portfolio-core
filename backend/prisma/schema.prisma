@@ -112,45 +112,50 @@ enum MetricType {
   BURN
   TRACTION
   HEADCOUNT
+  COGS
+  EBITDA
 }
 
 model Investment {
   id                        String              @id @default(uuid())
-  
+   
   icReference               String              @unique
   icApprovalDate            DateTime
   investmentExecutionDate   DateTime
-  dealOwner                 String
-  
+   
   companyName               String
   sector                    String
-  geography                 String
   stage                     InvestmentStage
-  
+   
   investmentType            InvestmentType
   committedCapitalLcl       Float
   deployedCapitalLcl        Float               @default(0)
   ownershipPercent          Float?
   coInvestors               String?
-  
+   
   hasBoardSeat              Boolean             @default(false)
   hasProRataRights          Boolean             @default(false)
   hasAntiDilutionProtection Boolean             @default(false)
-  
-  localCurrency             String              @default("USD")
-  investmentFxRate          Float               @default(1.0)
-  investmentFxSource        String?
-  valuationFxRate           Float               @default(1.0)
-  valuationFxSource         String?
-  
+   
   roundSizeEur              Float?
   enterpriseValueEur        Float?
   currentFairValueEur       Float
-  
+   
+  // Runway calculation fields for Excel template system
+  snapshotDate              DateTime?
+  cashAtSnapshot            Float?
+  monthlyBurn               Float?
+  calculatedRunwayMonths    Float?
+  customersAtSnapshot       Int?
+  arrAtSnapshot             Float?
+  liquidityExpectation      String?
+  expectedLiquidityDate     DateTime?
+  expectedLiquidityMultiple Float?
+   
   raisedFollowOnCapital     Boolean             @default(false)
   clearProductMarketFit     Boolean             @default(false)
   meaningfulRevenue         Boolean             @default(false)
-  
+   
   status                    InvestmentStatus    @default(ACTIVE)
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt

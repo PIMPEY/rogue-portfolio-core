@@ -19,13 +19,10 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.716.0",
-    "@aws-sdk/s3-request-presigner": "^3.716.0",
-    "@prisma/client": "^6.7.0",
+    "@prisma/client": "^5.20.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "openai": "^4.77.3"
+    "express": "^4.22.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

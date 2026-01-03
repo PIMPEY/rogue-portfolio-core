@@ -12,6 +12,7 @@ import { handler as startReviewHandler } from './api/review/start/route';
 import { handler as reviewJobHandler } from './api/review/[id]/route';
 import { handler as analyzeHandler } from './api/review/analyze/route';
 import { handler as analyzeDirectHandler } from './api/review/analyze-direct/route';
+import ExcelTemplateProcessor from './excel-template-processor';
 
 console.log('🚀 Starting backend server...');
 console.log('📝 Environment:', process.env.NODE_ENV || 'development');
@@ -516,6 +517,127 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
   });
 
   res.json(action);
+}));
+
+app.post('/api/templates/import', asyncHandler(async (req, res) => {
+  try {
+    const processor = new ExcelTemplateProcessor();
+    
+    // Check if file is provided
+    if (!req.body.file || !req.body.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        errors: ['No Excel file provided'],
+        preview: null
+      });
+    }
+
+    // Process the Excel file
+    const result = await processor.processExcelBuffer(req.body.file.buffer);
+    
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    // Create investment record in database
+    const investmentData = result.data;
+    
+    // Map Excel data to Investment model
+    const investment = await prisma.investment.create({
+      data: {
+        companyName: investmentData.companyName,
+        sector: investmentData.sector,
+        stage: investmentData.stage,
+        investmentType: investmentData.investmentType,
+        committedCapitalLcl: investmentData.committedCapitalLcl,
+        ownershipPercent: investmentData.ownershipPercent,
+        roundSizeEur: investmentData.roundSizeEur,
+        enterpriseValueEur: investmentData.enterpriseValueEur,
+        currentFairValueEur: investmentData.currentFairValueEur,
+        
+        // Runway calculation fields
+        snapshotDate: investmentData.snapshotDate,
+        cashAtSnapshot: investmentData.cashAtSnapshot,
+        monthlyBurn: investmentData.monthlyBurn,
+        calculatedRunwayMonths: investmentData.calculatedRunwayMonths,
+        customersAtSnapshot: investmentData.customersAtSnapshot,
+        arrAtSnapshot: investmentData.arrAtSnapshot,
+        liquidityExpectation: investmentData.liquidityExpectation,
+        expectedLiquidityDate: investmentData.expectedLiquidityDate,
+        expectedLiquidityMultiple: investmentData.expectedLiquidityMultiple,
+        
+        // Required fields with defaults
+        icReference: `IC-${Date.now()}`,
+        icApprovalDate: new Date(),
+        investmentExecutionDate: new Date(),
+      }
+    });
+
+    // Create forecast data if projections exist
+    if (investmentData.revenueY1 || investmentData.ebitdaY1) {
+      const forecast = await prisma.forecast.create({
+        data: {
+          investmentId: investment.id,
+          version: 1,
+          startQuarter: new Date(),
+          horizonQuarters: 5,
+          rationale: 'Imported from Excel template',
+          metrics: {
+            create: [
+              // Revenue metrics
+              ...(investmentData.revenueY1 ? [{ metric: 'REVENUE', quarterIndex: 0, value: investmentData.revenueY1 }] : []),
+              ...(investmentData.revenueY2 ? [{ metric: 'REVENUE', quarterIndex: 1, value: investmentData.revenueY2 }] : []),
+              ...(investmentData.revenueY3 ? [{ metric: 'REVENUE', quarterIndex: 2, value: investmentData.revenueY3 }] : []),
+              ...(investmentData.revenueY4 ? [{ metric: 'REVENUE', quarterIndex: 3, value: investmentData.revenueY4 }] : []),
+              ...(investmentData.revenueY5 ? [{ metric: 'REVENUE', quarterIndex: 4, value: investmentData.revenueY5 }] : []),
+              
+              // COGS metrics
+              ...(investmentData.cogsY1 ? [{ metric: 'COGS', quarterIndex: 0, value: investmentData.cogsY1 }] : []),
+              ...(investmentData.cogsY2 ? [{ metric: 'COGS', quarterIndex: 1, value: investmentData.cogsY2 }] : []),
+              ...(investmentData.cogsY3 ? [{ metric: 'COGS', quarterIndex: 2, value: investmentData.cogsY3 }] : []),
+              ...(investmentData.cogsY4 ? [{ metric: 'COGS', quarterIndex: 3, value: investmentData.cogsY4 }] : []),
+              ...(investmentData.cogsY5 ? [{ metric: 'COGS', quarterIndex: 4, value: investmentData.cogsY5 }] : []),
+              
+              // EBITDA metrics
+              ...(investmentData.ebitdaY1 ? [{ metric: 'EBITDA', quarterIndex: 0, value: investmentData.ebitdaY1 }] : []),
+              ...(investmentData.ebitdaY2 ? [{ metric: 'EBITDA', quarterIndex: 1, value: investmentData.ebitdaY2 }] : []),
+              ...(investmentData.ebitdaY3 ? [{ metric: 'EBITDA', quarterIndex: 2, value: investmentData.ebitdaY3 }] : []),
+              ...(investmentData.ebitdaY4 ? [{ metric: 'EBITDA', quarterIndex: 3, value: investmentData.ebitdaY4 }] : []),
+              ...(investmentData.ebitdaY5 ? [{ metric: 'EBITDA', quarterIndex: 4, value: investmentData.ebitdaY5 }] : []),
+            ]
+          }
+        }
+      });
+    }
+
+    // Create audit log entry
+    await prisma.auditLog.create({
+      data: {
+        investmentId: investment.id,
+        action: 'INVESTMENT_CREATED',
+        rationale: 'Investment created from Excel template import',
+        changedBy: 'System',
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        investmentId: investment.id,
+        companyName: investment.companyName,
+        message: 'Investment created successfully from Excel template'
+      },
+      errors: []
+    });
+
+  } catch (error: any) {
+    console.error('Excel template import error:', error);
+    res.status(500).json({
+      success: false,
+      errors: [`Failed to import Excel template: ${error.message}`],
+      preview: null
+    });
+  }
 }));
 
 app.use(notFoundHandler);
