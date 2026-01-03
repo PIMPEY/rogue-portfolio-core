@@ -156,18 +156,19 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   };
 
   const prepareChartData = (forecast: Array<{ quarterIndex: number; value: number }>, actual: Array<{ quarter: number; value: number }>) => {
-    const maxQuarter = Math.max(
+    const maxPeriod = Math.max(
       ...forecast.map(f => f.quarterIndex),
-      ...actual.map(a => a.quarter)
+      ...actual.map(a => a.quarter),
+      0
     );
 
     const data = [];
-    for (let q = 1; q <= maxQuarter; q++) {
-      const forecastPoint = forecast.find(f => f.quarterIndex === q);
-      const actualPoint = actual.find(a => a.quarter === q);
-      
+    for (let period = 1; period <= maxPeriod; period++) {
+      const forecastPoint = forecast.find(f => f.quarterIndex === period);
+      const actualPoint = actual.find(a => a.quarter === period);
+
       data.push({
-        quarter: `Q${q}`,
+        quarter: `Y${period}`,
         forecast: forecastPoint?.value || null,
         actual: actualPoint?.value || null
       });
