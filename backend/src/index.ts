@@ -12,7 +12,7 @@ import { requireChangeRationale, ChangeRationaleRequest } from './middleware/cha
 
 
 
-import ExcelTemplateProcessor from './excel-template-processor';
+import ExcelTemplateProcessor from "../excel-template-processor.js";
 
 
 console.log('🚀 Starting backend server...');
