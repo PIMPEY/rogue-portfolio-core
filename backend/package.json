@@ -19,12 +19,14 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.670.0",
+    "@aws-sdk/s3-request-presigner": "^3.670.0",
     "@prisma/client": "^6.7.0",
+    "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "express": "^4.22.1",
-    "xlsx": "^0.18.5",
-    "@aws-sdk/client-s3": "^3.670.0",
-    "@aws-sdk/s3-request-presigner": "^3.670.0"
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

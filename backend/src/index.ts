@@ -5,6 +5,7 @@ import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 import { authenticate, AuthRequest } from './middleware/auth';
 import { requireChangeRationale, ChangeRationaleRequest } from './middleware/changeRationale';
+import multer from 'multer';
 
 
 
@@ -28,6 +29,9 @@ console.log('🗄️  Database URL configured:', process.env.DATABASE_URL ? '✅
 
 app.use(cors());
 app.use(express.json());
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Simple health check that works even before database connection
 app.get('/health', (req, res) => {
@@ -520,7 +524,7 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
   res.json(action);
 }));
 
-app.post("/api/templates/import", asyncHandler(async (req, res) => {
+app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req, res) => {
   try {
     // Check if investmentId is provided
     if (!req.body.investmentId) {
