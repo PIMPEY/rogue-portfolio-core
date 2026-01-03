@@ -113,6 +113,7 @@ enum MetricType {
   TRACTION
   HEADCOUNT
   COGS
+  OPEX
   EBITDA
 }
 

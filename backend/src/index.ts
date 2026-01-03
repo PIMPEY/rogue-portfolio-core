@@ -217,10 +217,13 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
   if (activeFlags >= 3) status = 'RED';
   else if (activeFlags >= 1) status = 'AMBER';
 
-  // Prepare forecast data grouped by metric
+  // Prepare forecast data grouped by metric (using yearIndex for annual data)
   const forecastMetrics = investment.forecasts[0]?.metrics || [];
   const forecastData = {
     revenue: forecastMetrics.filter(m => m.metric === 'REVENUE').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    cogs: forecastMetrics.filter(m => m.metric === 'COGS').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    opex: forecastMetrics.filter(m => m.metric === 'OPEX').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    ebitda: forecastMetrics.filter(m => m.metric === 'EBITDA').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     burn: forecastMetrics.filter(m => m.metric === 'BURN').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     traction: forecastMetrics.filter(m => m.metric === 'TRACTION').map(m => ({ quarterIndex: m.quarterIndex, value: m.value }))
   };
@@ -608,7 +611,53 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
       }
     });
 
-    // Forecast creation removed for MVP - returning preview data only
+    // Create forecast with annual projections (Y1-Y5)
+    // Delete existing forecasts for this investment first
+    await prisma.forecast.deleteMany({
+      where: { investmentId: req.body.investmentId }
+    });
+
+    // Create new forecast with yearIndex (1-5) for annual data
+    const forecast = await prisma.forecast.create({
+      data: {
+        investmentId: req.body.investmentId,
+        version: 1,
+        startQuarter: investmentData.snapshotDate || new Date(),
+        horizonQuarters: 20, // 5 years = 20 quarters
+        rationale: 'Excel template import - annual projections',
+        metrics: {
+          create: [
+            // Revenue Y1-Y5
+            ...[1, 2, 3, 4, 5].map(year => ({
+              metric: 'REVENUE',
+              quarterIndex: year,
+              value: investmentData[`revenueY${year}`] || 0
+            })),
+            // COGS Y1-Y5
+            ...[1, 2, 3, 4, 5].map(year => ({
+              metric: 'COGS',
+              quarterIndex: year,
+              value: investmentData[`cogsY${year}`] || 0
+            })),
+            // OPEX Y1-Y5
+            ...[1, 2, 3, 4, 5].map(year => ({
+              metric: 'OPEX',
+              quarterIndex: year,
+              value: investmentData[`opexY${year}`] || 0
+            })),
+            // EBITDA Y1-Y5
+            ...[1, 2, 3, 4, 5].map(year => ({
+              metric: 'EBITDA',
+              quarterIndex: year,
+              value: investmentData[`ebitdaY${year}`] || 0
+            }))
+          ]
+        }
+      },
+      include: {
+        metrics: true
+      }
+    });
 
     // Return success response with preview data
     res.status(201).json({
@@ -616,7 +665,8 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
       data: {
         investmentId: investment.id,
         companyName: investment.companyName,
-        message: "Investment updated successfully from Excel template"
+        forecastMetricsCreated: forecast.metrics.length,
+        message: "Investment updated successfully from Excel template with forecast data"
       }
     });
   } catch (error) {

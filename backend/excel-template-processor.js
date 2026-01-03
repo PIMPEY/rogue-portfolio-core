@@ -21,7 +21,6 @@ class ExcelTemplateProcessor {
 
     this.requiredProjectionFields = [
       'revenueY1', 'revenueY2', 'revenueY3', 'revenueY4', 'revenueY5',
-      'arrY1', 'arrY2', 'arrY3', 'arrY4', 'arrY5',
       'cogsY1', 'cogsY2', 'cogsY3', 'cogsY4', 'cogsY5',
       'opexY1', 'opexY2', 'opexY3', 'opexY4', 'opexY5',
       'ebitdaY1', 'ebitdaY2', 'ebitdaY3', 'ebitdaY4', 'ebitdaY5'
