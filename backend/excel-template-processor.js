@@ -329,4 +329,6 @@ class ExcelTemplateProcessor {
   
 }
 
+}
+
 module.exports = ExcelTemplateProcessor;
