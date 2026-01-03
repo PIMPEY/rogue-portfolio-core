@@ -116,11 +116,16 @@ class ExcelTemplateProcessor {
       'Ownership %': 'ownershipPercent',
       'Round Size (EUR)': 'roundSizeEur',
       'Enterprise Value (EUR)': 'enterpriseValueEur',
-      'Current Fair Value (EUR)': 'currentFairValueEur',
+            'Current Fair Value (EUR)': 'currentFairValueEur',
+      'Currency': 'currency',
+      'Entry Valuation': 'entryValuation',
+      'isPostMoney': 'isPostMoney',
+      'Expected Liquidity Year': 'expectedLiquidityYear',
+      
       'Snapshot Date': 'snapshotDate',
       'Cash at Snapshot': 'cashAtSnapshot',
       'Customers at Snapshot': 'customersAtSnapshot',
-      'ARR at Snapshot': 'arrAtSnapshot',
+      
       'Liquidity Expectation': 'liquidityExpectation',
       'Expected Liquidity Date': 'expectedLiquidityDate',
       'Expected Liquidity Multiple': 'expectedLiquidityMultiple',
@@ -156,21 +161,18 @@ class ExcelTemplateProcessor {
       'Revenue Y3': 'revenueY3',
       'Revenue Y4': 'revenueY4',
       'Revenue Y5': 'revenueY5',
-      'ARR Y1': 'arrY1',
-      'ARR Y2': 'arrY2',
-      'ARR Y3': 'arrY3',
-      'ARR Y4': 'arrY4',
-      'ARR Y5': 'arrY5',
-      'COGS Y1': 'cogsY1',
+      
+            'COGS Y1': 'cogsY1',
       'COGS Y2': 'cogsY2',
       'COGS Y3': 'cogsY3',
       'COGS Y4': 'cogsY4',
       'COGS Y5': 'cogsY5',
-      'Opex Y1': 'opexY1',
-      'Opex Y2': 'opexY2',
-      'Opex Y3': 'opexY3',
-      'Opex Y4': 'opexY4',
-      'Opex Y5': 'opexY5',
+      
+      'OPEX Y1': 'opexY1',
+      'OPEX Y2': 'opexY2',
+      'OPEX Y3': 'opexY3',
+      'OPEX Y4': 'opexY4',
+      'OPEX Y5': 'opexY5',
       'EBITDA Y1': 'ebitdaY1',
       'EBITDA Y2': 'ebitdaY2',
       'EBITDA Y3': 'ebitdaY3',
@@ -228,34 +230,58 @@ class ExcelTemplateProcessor {
 
   validateData(data) {
     const errors = [];
-
+    
     // Check required Summary fields
     for (const field of this.requiredSummaryFields) {
-      if (data[field] === null || data[field] === undefined || data[field] === '') {
+      if (data[field] === null || data[field] === undefined || data[field] === "") {
         errors.push(`Missing required field: ${field}`);
       }
     }
-
+    
+    // Validate currency field
+    if (!data.currency || data.currency === "") {
+      errors.push("Currency is required");
+    }
+    
+    // Validate entry valuation
+    if (!data.entryValuation || data.entryValuation <= 0) {
+      errors.push("Entry valuation must be greater than 0");
+    }
+    
+    // Validate isPostMoney boolean
+    if (data.isPostMoney === undefined || data.isPostMoney === null) {
+      errors.push("isPostMoney field is required (true/false)");
+    }
+    
+    // Validate liquidity year (1-5 relative)
+    if (data.expectedLiquidityYear) {
+      const liquidityYear = parseInt(data.expectedLiquidityYear);
+      if (isNaN(liquidityYear) || liquidityYear < 1 || liquidityYear > 5) {
+        errors.push("Expected Liquidity Year must be between 1 and 5 (relative years)");
+      }
+    }
+    
     // Check if runway calculation is required
     const y1Revenue = data.revenueY1 || 0;
     const y1Ebitda = data.ebitdaY1 || 0;
     
     const runwayRequired = (y1Revenue === 0 || y1Revenue === null || y1Revenue === undefined) || 
                           (y1Ebitda < 0);
-
+    
     if (runwayRequired) {
       if (!data.monthlyBurn || data.monthlyBurn <= 0) {
-        errors.push('Monthly burn is required when Y1 revenue is 0/blank or Y1 EBITDA is negative');
+        errors.push("Monthly burn is required when Y1 revenue is 0/blank or Y1 EBITDA is negative");
       }
       if (!data.snapshotDate) {
-        errors.push('Snapshot date is required for runway calculation');
+        errors.push("Snapshot date is required for runway calculation");
       }
     }
-
+    
     return {
       isValid: errors.length === 0,
       errors
     };
+  };
   }
 
   calculateRunway(data) {

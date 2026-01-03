@@ -520,32 +520,55 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
   res.json(action);
 }));
 
-app.post('/api/templates/import', asyncHandler(async (req, res) => {
+app.post("/api/templates/import", asyncHandler(async (req, res) => {
   try {
-    const processor = new ExcelTemplateProcessor();
-    
-    // Check if file is provided
-    if (!req.body.file || !req.body.file.buffer) {
+    // Check if investmentId is provided
+    if (!req.body.investmentId) {
       return res.status(400).json({
         success: false,
-        errors: ['No Excel file provided'],
+        errors: ["investmentId parameter is required"],
         preview: null
       });
     }
 
+    // Check if file is provided via multipart upload
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        errors: ["No Excel file provided"],
+        preview: null
+      });
+    }
+
+    const processor = new ExcelTemplateProcessor();
+    
     // Process the Excel file
-    const result = await processor.processExcelBuffer(req.body.file.buffer);
+    const result = await processor.processExcelBuffer(req.file.buffer);
     
     if (!result.success) {
       return res.status(400).json(result);
     }
 
-    // Create investment record in database
+    // Verify investment exists
+    const existingInvestment = await prisma.investment.findUnique({
+      where: { id: req.body.investmentId }
+    });
+    
+    if (!existingInvestment) {
+      return res.status(404).json({
+        success: false,
+        errors: ["Investment not found"],
+        preview: null
+      });
+    }
+    
+    // Update investment with Excel data
     const investmentData = result.data;
     
-    // Map Excel data to Investment model
-    const investment = await prisma.investment.create({
+    const investment = await prisma.investment.update({
+      where: { id: req.body.investmentId },
       data: {
+        // Update basic fields
         companyName: investmentData.companyName,
         sector: investmentData.sector,
         stage: investmentData.stage,
@@ -556,7 +579,7 @@ app.post('/api/templates/import', asyncHandler(async (req, res) => {
         enterpriseValueEur: investmentData.enterpriseValueEur,
         currentFairValueEur: investmentData.currentFairValueEur,
         
-        // Runway calculation fields
+        // Update runway calculation fields
         snapshotDate: investmentData.snapshotDate,
         cashAtSnapshot: investmentData.cashAtSnapshot,
         monthlyBurn: investmentData.monthlyBurn,
@@ -566,11 +589,6 @@ app.post('/api/templates/import', asyncHandler(async (req, res) => {
         liquidityExpectation: investmentData.liquidityExpectation,
         expectedLiquidityDate: investmentData.expectedLiquidityDate,
         expectedLiquidityMultiple: investmentData.expectedLiquidityMultiple,
-        
-        // Required fields with defaults
-        icReference: `IC-${Date.now()}`,
-        icApprovalDate: new Date(),
-        investmentExecutionDate: new Date(),
       }
     });
 
@@ -582,7 +600,7 @@ app.post('/api/templates/import', asyncHandler(async (req, res) => {
       data: {
         investmentId: investment.id,
         companyName: investment.companyName,
-        message: "Investment created successfully from Excel template (preview mode)"
+        message: "Investment updated successfully from Excel template"
       }
     });
   } catch (error) {
