@@ -1,0 +1,22 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+<title>Backend Test</title>  
+</head>  
+<body>  
+<h1>Backend Connection Test</h1>  
+<div id="status">Testing...</div>  
+<div id="data"></div>  
+<script>  
+fetch('http://localhost:3001/api/portfolio')  
+  .then(r => r.json())  
+  .then(d => {  
+    document.getElementById('status').innerHTML = 'SUCCESS: ' + d.length + ' investments';  
+    document.getElementById('data').innerHTML = '<pre>' + JSON.stringify(d, null, 2) + '</pre>';  
+  })  
+  .catch(e => {  
+    document.getElementById('status').innerHTML = 'ERROR: ' + e.message;  
+  });  
+</script>  
+</body>  
+</html> 

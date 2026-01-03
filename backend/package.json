@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "echo '🔄 Running database migrations...' && (prisma db push --skip-generate || prisma migrate deploy || echo '⚠️  Migration failed, starting server anyway...') && echo '🚀 Starting server...' && node dist/index.js",
+    "start": "echo \"Running database migrations...\" && (prisma db push --skip-generate || prisma migrate deploy || echo \"Migration failed, starting server anyway...\") && echo \"Starting server...\" && node dist/index.js",
     "start:dev": "node dist/index.js",
     "migrate:deploy": "prisma db push --skip-generate || prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
@@ -19,7 +19,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^5.20.0",
+    "@prisma/client": "^6.7.0",
     "cors": "^2.8.5",
     "express": "^4.22.1",
     "xlsx": "^0.18.5"

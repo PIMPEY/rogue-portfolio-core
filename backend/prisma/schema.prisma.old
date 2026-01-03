@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvestmentType {
+  SAFE
+  CLN
+  EQUITY
+  OTHER
+}
+
+enum InvestmentStatus {
+  PENDING_REVIEW
+  ACTIVE
+  EXITED
+  WRITTEN_OFF
+}
+
+enum InvestmentStage {
+  PRE_SEED
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C
+  SERIES_D_PLUS
+  GROWTH
+  OTHER
+}
+
+enum CashflowType {
+  INITIAL_INVESTMENT
+  FOLLOW_ON
+  DISTRIBUTION
+  PARTIAL_EXIT
+}
+
+enum DocumentType {
+  PITCH_DECK
+  FINANCIAL_MODEL
+  HISTORICAL_FINANCIALS
+  LEGAL_SHAREHOLDING
+  MARKET_RESEARCH
+  OTHER
+}
+
+enum DocumentVersionType {
+  INITIAL
+  REVISION
+}
+
+enum AuditAction {
+  VALUATION_UPDATE
+  INVESTMENT_CREATED
+  INVESTMENT_UPDATED
+  DOCUMENT_UPLOADED
+  CASHFLOW_ADDED
+  ACTION_REQUIRED_CREATED
+  ACTION_REQUIRED_UPDATED
+  ACTION_REQUIRED_CLEARED
+}
+
+enum ActionType {
+  SUPPORT
+  FOLLOW_ON
+  MONITOR
+  EXIT_PREPARATION
+}
+
+enum ExitType {
+  M_AND_A
+  SECONDARY
+  IPO
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CLEARED
+}
+
+enum FounderUpdateStatus {
+  SUBMITTED
+  LATE
+  OVERDUE
+}
+
+enum FlagStatus {
+  NEW
+  ACKNOWLEDGED
+  MONITORING
+  RESOLVED
+}
+
+enum FlagType {
+  REVENUE_MISS
+  TRACTION_MISS
+  BURN_SPIKE
+  BURN_CRITICAL
+  RUNWAY_RISK
+  RUNWAY_CRITICAL
+  LATE_UPDATE
+}
+
+enum MetricType {
+  REVENUE
+  BURN
+  TRACTION
+  HEADCOUNT
+}
+
+model Investment {
+  id                        String              @id @default(uuid())
+  
+  icReference               String              @unique
+  icApprovalDate            DateTime
+  investmentExecutionDate   DateTime
+  dealOwner                 String
+  
+  companyName               String
+  sector                    String
+  geography                 String
+  stage                     InvestmentStage
+  
+  investmentType            InvestmentType
+  committedCapitalLcl       Float
+  deployedCapitalLcl        Float               @default(0)
+  ownershipPercent          Float?
+  coInvestors               String?
+  
+  hasBoardSeat              Boolean             @default(false)
+  hasProRataRights          Boolean             @default(false)
+  hasAntiDilutionProtection Boolean             @default(false)
+  
+  localCurrency             String              @default("USD")
+  investmentFxRate          Float               @default(1.0)
+  investmentFxSource        String?
+  valuationFxRate           Float               @default(1.0)
+  valuationFxSource         String?
+  
+  roundSizeEur              Float?
+  enterpriseValueEur        Float?
+  currentFairValueEur       Float
+  
+  raisedFollowOnCapital     Boolean             @default(false)
+  clearProductMarketFit     Boolean             @default(false)
+  meaningfulRevenue         Boolean             @default(false)
+  
+  status                    InvestmentStatus    @default(ACTIVE)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  
+  founders                  Founder[]
+  forecasts                 Forecast[]
+  founderUpdates            FounderUpdate[]
+  flags                     Flag[]
+  notes                     Note[]
+  cashflows                 Cashflow[]
+  valuations                Valuation[]
+  documents                 Document[]
+  auditLogs                 AuditLog[]
+  actionsRequired           ActionRequired[]
+  reviewJobs                ReviewJob[]
+}
+
+model Founder {
+  id            String      @id @default(uuid())
+  investmentId  String
+  investment    Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  name          String
+  email         String
+  createdAt     DateTime    @default(now())
+}
+
+model Forecast {
+  id              String          @id @default(uuid())
+  investmentId    String
+  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  version         Int
+  startQuarter    DateTime
+  horizonQuarters Int             @default(8)
+  rationale       String?
+  createdAt       DateTime        @default(now())
+  metrics         ForecastMetric[]
+  @@unique([investmentId, version])
+}
+
+model ForecastMetric {
+  id          String      @id @default(uuid())
+  forecastId  String
+  forecast    Forecast    @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+  metric      MetricType
+  quarterIndex Int
+  value       Float
+  createdAt   DateTime    @default(now())
+  @@unique([forecastId, metric, quarterIndex])
+}
+
+model FounderUpdate {
+  id                String              @id @default(uuid())
+  investmentId      String
+  investment        Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  quarterIndex      Int
+  dueDate           DateTime
+  submittedAt       DateTime            @default(now())
+  status            FounderUpdateStatus @default(SUBMITTED)
+  actualRevenue     Float
+  actualBurn        Float
+  actualRunwayMonths Float
+  actualTraction    Float
+  narrativeGood     String?
+  narrativeBad      String?
+  narrativeHelp     String?
+  createdAt         DateTime            @default(now())
+  flags             Flag[]
+  @@unique([investmentId, quarterIndex])
+}
+
+model Flag {
+  id              String          @id @default(uuid())
+  investmentId    String
+  investment      Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  founderUpdateId String?
+  founderUpdate   FounderUpdate?  @relation(fields: [founderUpdateId], references: [id], onDelete: SetNull)
+  type            FlagType
+  metric          MetricType?
+  threshold       String
+  actualValue     Float?
+  forecastValue   Float?
+  deltaPct        Float?
+  status          FlagStatus      @default(NEW)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  resolvedAt      DateTime?
+  resolutionNote  String?
+}
+
+model Note {
+  id             String      @id @default(uuid())
+  investmentId   String
+  investment     Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  authorUserId   String
+  body           String
+  createdAt      DateTime    @default(now())
+}
+
+model Cashflow {
+  id              String        @id @default(uuid())
+  investmentId    String
+  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type            CashflowType
+  amountLcl       Float?
+  amountEur       Float
+  date            DateTime
+  description     String?
+  createdAt       DateTime      @default(now())
+}
+
+model Valuation {
+  id              String        @id @default(uuid())
+  investmentId    String
+  investment      Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  fairValueEur    Float
+  valuationDate   DateTime
+  rationale       String
+  changedBy       String
+  createdAt       DateTime        @default(now())
+}
+
+model Document {
+  id              String              @id @default(uuid())
+  investmentId    String
+  investment      Investment          @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type            DocumentType
+  versionType     DocumentVersionType
+  filePath        String
+  storageUrl      String
+  fileName        String
+  fileSize        Int
+  contentType     String
+  checksum        String
+  status          String              @default("uploaded")
+  uploadedAt      DateTime            @default(now())
+  uploadedBy      String
+  isCurrent       Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+}
+
+model AuditLog {
+  id                String      @id @default(uuid())
+  investmentId      String
+  investment        Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  actionRequiredId  String?
+  action            AuditAction
+  fieldName         String?
+  oldValue          String?
+  newValue          String?
+  rationale         String?
+  changedBy         String
+  createdAt         DateTime    @default(now())
+}
+
+model ActionRequired {
+  id                      String        @id @default(uuid())
+  investmentId            String
+  investment              Investment    @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  type                    ActionType
+  actionOwner             String
+  reviewDate              DateTime
+  notes                   String
+  status                  ActionStatus  @default(PENDING)
+  exitType                ExitType?
+  indicativeValuationMin  Float?
+  indicativeValuationMax  Float?
+  knownAcquirers          String?
+  clearedAt               DateTime?
+  clearedBy               String?
+  clearRationale          String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+enum ReviewJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model ReviewJob {
+  id                String          @id @default(uuid())
+  investmentId      String
+  investment        Investment      @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  status            ReviewJobStatus @default(QUEUED)
+  progress          Int             @default(0)
+  errorMessage      String?
+  resultLocation    String?
+  summaryJson       Json?
+  docChecksums      String
+  reviewConfigVersion String         @default("1.0")
+  createdAt         DateTime        @default(now())
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  retryCount        Int             @default(0)
+}
