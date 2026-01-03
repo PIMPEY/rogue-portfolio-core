@@ -594,3 +594,22 @@ app.post('/api/templates/import', asyncHandler(async (req, res) => {
     });
   }
 }));
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`💓 Health check available at http://localhost:${PORT}/health`);
+  console.log(`📊 Portfolio API at http://localhost:${PORT}/api/portfolio`);
+  console.log(`📋 Excel template import at http://localhost:${PORT}/api/templates/import`);
+});
+
+// Handle graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, shutting down gracefully");
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("SIGINT received, shutting down gracefully");
+  process.exit(0);
+});
