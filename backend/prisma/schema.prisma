@@ -109,6 +109,9 @@ enum FlagType {
 
 enum MetricType {
   REVENUE
+  COGS
+  OPEX
+  EBITDA
   BURN
   TRACTION
   HEADCOUNT
@@ -116,45 +119,45 @@ enum MetricType {
 
 model Investment {
   id                        String              @id @default(uuid())
-  
+
   icReference               String              @unique
   icApprovalDate            DateTime
   investmentExecutionDate   DateTime
   dealOwner                 String
-  
+
   companyName               String
   sector                    String
   geography                 String
   stage                     InvestmentStage
-  
+
   investmentType            InvestmentType
   committedCapitalLcl       Float
   deployedCapitalLcl        Float               @default(0)
   ownershipPercent          Float?
   coInvestors               String?
-  
+
   hasBoardSeat              Boolean             @default(false)
   hasProRataRights          Boolean             @default(false)
   hasAntiDilutionProtection Boolean             @default(false)
-  
+
   localCurrency             String              @default("USD")
   investmentFxRate          Float               @default(1.0)
   investmentFxSource        String?
   valuationFxRate           Float               @default(1.0)
   valuationFxSource         String?
-  
+
   roundSizeEur              Float?
   enterpriseValueEur        Float?
   currentFairValueEur       Float
-  
+
   raisedFollowOnCapital     Boolean             @default(false)
   clearProductMarketFit     Boolean             @default(false)
   meaningfulRevenue         Boolean             @default(false)
-  
+
   status                    InvestmentStatus    @default(ACTIVE)
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
-  
+
   founders                  Founder[]
   forecasts                 Forecast[]
   founderUpdates            FounderUpdate[]
@@ -166,6 +169,8 @@ model Investment {
   auditLogs                 AuditLog[]
   actionsRequired           ActionRequired[]
   reviewJobs                ReviewJob[]
+  thesis                    InvestmentThesis?
+  liquidity                 InvestmentLiquidity[]
 }
 
 model Founder {
@@ -347,4 +352,36 @@ model ReviewJob {
   startedAt         DateTime?
   finishedAt        DateTime?
   retryCount        Int             @default(0)
+}
+
+model InvestmentThesis {
+  id                    String      @id @default(uuid())
+  investmentId          String      @unique
+  investment            Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  currency              String
+  entryValuation        Float?
+  isPostMoney           Boolean     @default(false)
+  snapshotDate          DateTime?
+  snapshotCash          Float?
+  snapshotBurn          Float?
+  snapshotCustomers     Int?
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model InvestmentLiquidity {
+  id                    String      @id @default(uuid())
+  investmentId          String
+  investment            Investment  @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  expectedYear          Int
+  expectedValuation     Float?
+  expectedType          String?
+
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@unique([investmentId, expectedYear])
 }

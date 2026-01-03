@@ -23,6 +23,7 @@ interface AnalysisResult {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+const EXCEL_TYPES = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
 
 export default function SimpleMVP() {
   const [investment, setInvestment] = useState({
@@ -40,6 +41,9 @@ export default function SimpleMVP() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const [lastCreatedInvestmentId, setLastCreatedInvestmentId] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setInvestment({ ...investment, [e.target.name]: e.target.value });
@@ -154,18 +158,21 @@ export default function SimpleMVP() {
       }
 
       const result = await response.json();
-      setSuccess('Investment created successfully! ID: ' + result.id);
-      
-      // Clear form after successful creation
-      setInvestment({
-        companyName: '',
-        sector: '',
-        stage: 'SEED',
-        committedCapital: '',
-        dealOwner: '',
-      });
-      setDocuments([]);
-      setAnalysis(null);
+      setLastCreatedInvestmentId(result.id);
+      setSuccess('Investment created successfully! ID: ' + result.id + (excelFile ? ' - You can now upload the Excel template.' : ''));
+
+      // Don't clear form if there's an Excel file to upload
+      if (!excelFile) {
+        setInvestment({
+          companyName: '',
+          sector: '',
+          stage: 'SEED',
+          committedCapital: '',
+          dealOwner: '',
+        });
+        setDocuments([]);
+        setAnalysis(null);
+      }
     } catch (err: any) {
       setError('Failed to create investment: ' + err.message);
     } finally {
@@ -240,6 +247,86 @@ export default function SimpleMVP() {
     setSuccess('Analysis exported to JSON');
   };
 
+  const handleExcelFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!EXCEL_TYPES.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      setError('Invalid file type. Please upload an Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
+      return;
+    }
+
+    setExcelFile(file);
+    setSuccess(`Excel file selected: ${file.name}`);
+    setError('');
+  };
+
+  const importExcelTemplate = async () => {
+    if (!excelFile) {
+      setError('Please select an Excel file first');
+      return;
+    }
+
+    if (!lastCreatedInvestmentId) {
+      setError('Please create an investment first before importing Excel template');
+      return;
+    }
+
+    setImportingExcel(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
+      const formData = new FormData();
+      formData.append('file', excelFile);
+      formData.append('investmentId', lastCreatedInvestmentId);
+
+      const response = await fetch(`${BACKEND_URL}/api/templates/import`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result.validationErrors) {
+          const errorMessages = result.validationErrors
+            .map((e: any) => `${e.sheet} - ${e.field}: ${e.message}`)
+            .join('\n');
+          throw new Error(`Validation failed:\n${errorMessages}`);
+        }
+        throw new Error(result.error || 'Failed to import Excel template');
+      }
+
+      setSuccess('Excel template imported successfully! Data has been saved to the investment.');
+      setExcelFile(null);
+      setLastCreatedInvestmentId(null);
+
+      // Clear form
+      setInvestment({
+        companyName: '',
+        sector: '',
+        stage: 'SEED',
+        committedCapital: '',
+        dealOwner: '',
+      });
+      setDocuments([]);
+      setAnalysis(null);
+    } catch (err: any) {
+      setError('Failed to import Excel template: ' + err.message);
+    } finally {
+      setImportingExcel(false);
+    }
+  };
+
   const resetForm = () => {
     setInvestment({
       companyName: '',
@@ -252,6 +339,8 @@ export default function SimpleMVP() {
     setAnalysis(null);
     setError('');
     setSuccess('');
+    setExcelFile(null);
+    setLastCreatedInvestmentId(null);
   };
 
   return (
@@ -461,6 +550,59 @@ export default function SimpleMVP() {
                 </div>
               </div>
             )}
+
+            <div className="border-t border-gray-200 my-6 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Excel Template Upload (Optional)</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload an Excel template to populate forecast data, thesis information, and liquidity expectations.
+                You must create the investment first before uploading the template.
+              </p>
+
+              <div className="flex items-center gap-4">
+                <label
+                  htmlFor="excel-upload"
+                  className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 cursor-pointer transition-colors font-medium"
+                >
+                  Select Excel File
+                  <input
+                    id="excel-upload"
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="sr-only"
+                    onChange={handleExcelFileSelect}
+                    disabled={importingExcel}
+                  />
+                </label>
+
+                {excelFile && (
+                  <div className="flex-1 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-900">{excelFile.name}</span>
+                      <span className="text-xs text-gray-500">({(excelFile.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                    <button
+                      onClick={() => setExcelFile(null)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {excelFile && lastCreatedInvestmentId && (
+                <button
+                  onClick={importExcelTemplate}
+                  disabled={importingExcel}
+                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {importingExcel ? 'Importing Excel...' : 'Import Excel Template'}
+                </button>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button

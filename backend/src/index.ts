@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import multer from 'multer';
 import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 import { authenticate, AuthRequest } from './middleware/auth';
@@ -12,8 +13,12 @@ import { handler as startReviewHandler } from './api/review/start/route';
 import { handler as reviewJobHandler } from './api/review/[id]/route';
 import { handler as analyzeHandler } from './api/review/analyze/route';
 import { handler as analyzeDirectHandler } from './api/review/analyze-direct/route';
+import { handler as importTemplateHandler } from './api/templates/import/route';
 
 dotenv.config();
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({ storage: multer.memoryStorage() });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,6 +42,7 @@ app.get('/api/review/:id', asyncHandler(reviewJobHandler));
 app.post('/api/review/:id', asyncHandler(reviewJobHandler));
 app.post('/api/review/analyze', asyncHandler(analyzeHandler));
 app.post('/api/review/analyze-direct', asyncHandler(analyzeDirectHandler));
+app.post('/api/templates/import', upload.single('file'), asyncHandler(importTemplateHandler));
 
 app.get('/api/portfolio', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({
