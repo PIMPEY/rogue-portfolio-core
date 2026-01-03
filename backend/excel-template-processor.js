@@ -281,7 +281,6 @@ class ExcelTemplateProcessor {
       isValid: errors.length === 0,
       errors
     };
-  };
   }
 
   calculateRunway(data) {
@@ -327,7 +326,7 @@ class ExcelTemplateProcessor {
       monthlyBurn: data.monthlyBurn || 0,
       snapshotDate: data.snapshotDate ? data.snapshotDate.toISOString().split('T')[0] : 'N/A'
     };
-  }
+  
 }
 
 module.exports = ExcelTemplateProcessor;
