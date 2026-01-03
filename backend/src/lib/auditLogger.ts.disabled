@@ -1,9 +1,9 @@
 import { prisma } from './prisma';
-import { AuditAction } from '@prisma/client';
+
 
 export interface AuditLogData {
   investmentId: string;
-  action: AuditAction;
+  action: string;
   fieldName?: string;
   oldValue?: string;
   newValue?: string;

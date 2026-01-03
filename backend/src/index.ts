@@ -5,14 +5,15 @@ import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 import { authenticate, AuthRequest } from './middleware/auth';
 import { requireChangeRationale, ChangeRationaleRequest } from './middleware/changeRationale';
-import { logInvestmentUpdate, logValuationUpdate, logActionRequiredUpdate, logActionRequiredCleared } from './lib/auditLogger';
-import { handler as presignedUrlHandler } from './api/documents/presigned-url/route';
-import { handler as uploadCompleteHandler } from './api/documents/upload-complete/route';
-import { handler as startReviewHandler } from './api/review/start/route';
-import { handler as reviewJobHandler } from './api/review/[id]/route';
-import { handler as analyzeHandler } from './api/review/analyze/route';
-import { handler as analyzeDirectHandler } from './api/review/analyze-direct/route';
+
+
+
+
+
+
+
 import ExcelTemplateProcessor from './excel-template-processor';
+
 
 console.log('🚀 Starting backend server...');
 console.log('📝 Environment:', process.env.NODE_ENV || 'development');
@@ -89,13 +90,13 @@ app.post('/api/seed', asyncHandler(async (req, res) => {
   }
 }));
 
-app.post('/api/documents/presigned-url', asyncHandler(presignedUrlHandler));
-app.post('/api/documents/upload-complete', asyncHandler(uploadCompleteHandler));
-app.post('/api/review/start', asyncHandler(startReviewHandler));
-app.get('/api/review/:id', asyncHandler(reviewJobHandler));
-app.post('/api/review/:id', asyncHandler(reviewJobHandler));
-app.post('/api/review/analyze', asyncHandler(analyzeHandler));
-app.post('/api/review/analyze-direct', asyncHandler(analyzeDirectHandler));
+// app.post("/api/documents/presigned-url", asyncHandler(presignedUrlHandler)); // Disabled for MVP
+// app.post("/api/documents/upload-complete", asyncHandler(uploadCompleteHandler)); // Disabled for MVP
+// app.post("/api/review/start", asyncHandler(startReviewHandler)); // Disabled for MVP
+// app.get("/api/review/:id", asyncHandler(reviewJobHandler)); // Disabled for MVP
+// app.post("/api/review/:id", asyncHandler(reviewJobHandler)); // Disabled for MVP
+// app.post("/api/review/analyze", asyncHandler(analyzeHandler)); // Disabled for MVP
+// app.post("/api/review/analyze-direct", asyncHandler(analyzeDirectHandler)); // Disabled for MVP
 
 app.get('/api/portfolio', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({
@@ -135,7 +136,7 @@ app.get('/api/portfolio', asyncHandler(async (req, res) => {
       companyName: inv.companyName,
       sector: inv.sector,
       stage: inv.stage,
-      geography: inv.geography,
+      // geography: inv.geography, // Field removed
       investmentType: inv.investmentType,
       committedCapitalEur: inv.committedCapitalLcl,
       deployedCapitalEur: inv.deployedCapitalLcl,
@@ -217,7 +218,7 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
     companyName: investment.companyName,
     sector: investment.sector,
     stage: investment.stage,
-    geography: investment.geography,
+    // geography: investment.geography, // Field removed
     investmentType: investment.investmentType,
     committedCapitalLcl: investment.committedCapitalLcl,
     deployedCapitalLcl: investment.deployedCapitalLcl,
@@ -312,8 +313,8 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
       icReference: investment.icReference || `IC-${Date.now()}`,
       icApprovalDate: investment.icApprovalDate || new Date(),
       investmentExecutionDate: investment.investmentExecutionDate || new Date(),
-      dealOwner: investment.dealOwner || "Unknown",
-      geography: investment.geography || "Unknown",
+      
+      // geography: investment.geography || "Unknown", // Field removed
       investmentType: investment.investmentType || "EQUITY",
       committedCapitalLcl: investment.committedCapitalLcl || 0,
       currentFairValueEur: investment.currentFairValueEur || investment.committedCapitalLcl || 0,
@@ -335,7 +336,7 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
           fileSize: file.fileSize,
           contentType: file.contentType || 'application/octet-stream',
           checksum: file.checksum || '',
-          uploadedBy: investment.dealOwner || "Unknown",
+          uploadedBy: "Unknown", // Field removed
           isCurrent: true
         }
       });
@@ -347,7 +348,7 @@ app.post('/api/investments/create', asyncHandler(async (req, res) => {
       investmentId: createdInvestment.id,
       action: 'INVESTMENT_CREATED',
       rationale: 'Investment created with document upload',
-      changedBy: investment.dealOwner || 'Unknown',
+      changedBy: "Unknown", // Field removed
     },
   });
 
@@ -386,7 +387,7 @@ app.put('/api/investments/:id', authenticate, requireChangeRationale, asyncHandl
   });
 
   if (Object.keys(changes).length > 0) {
-    await logInvestmentUpdate(id, changes, rationale, changedBy);
+    // Audit logging removed for MVP
   }
 
   res.json(investment);
@@ -430,7 +431,7 @@ app.post('/api/valuations', authenticate, requireChangeRationale, asyncHandler(a
     throw error;
   }
 
-  await logValuationUpdate(investmentId, existingInvestment.currentFairValueEur, fairValueEur, rationale, changedBy);
+  // Audit logging removed for MVP
 
   const valuation = await prisma.valuation.create({
     data: {
@@ -482,7 +483,7 @@ app.put('/api/actions/:id', authenticate, requireChangeRationale, asyncHandler(a
   });
 
   if (Object.keys(changes).length > 0) {
-    await logActionRequiredUpdate(existingAction.investmentId, id, changes, rationale, changedBy);
+    // Audit logging removed for MVP
   }
 
   res.json(action);
@@ -504,7 +505,7 @@ app.post('/api/actions/:id/clear', authenticate, requireChangeRationale, asyncHa
     throw error;
   }
 
-  await logActionRequiredCleared(existingAction.investmentId, id, rationale, changedBy);
+  // Audit logging removed for MVP
 
   const action = await prisma.actionRequired.update({
     where: { id },
@@ -573,119 +574,23 @@ app.post('/api/templates/import', asyncHandler(async (req, res) => {
       }
     });
 
-    // Create forecast data if projections exist
-    if (investmentData.revenueY1 || investmentData.ebitdaY1) {
-      const forecast = await prisma.forecast.create({
-        data: {
-          investmentId: investment.id,
-          version: 1,
-          startQuarter: new Date(),
-          horizonQuarters: 5,
-          rationale: 'Imported from Excel template',
-          metrics: {
-            create: [
-              // Revenue metrics
-              ...(investmentData.revenueY1 ? [{ metric: 'REVENUE', quarterIndex: 0, value: investmentData.revenueY1 }] : []),
-              ...(investmentData.revenueY2 ? [{ metric: 'REVENUE', quarterIndex: 1, value: investmentData.revenueY2 }] : []),
-              ...(investmentData.revenueY3 ? [{ metric: 'REVENUE', quarterIndex: 2, value: investmentData.revenueY3 }] : []),
-              ...(investmentData.revenueY4 ? [{ metric: 'REVENUE', quarterIndex: 3, value: investmentData.revenueY4 }] : []),
-              ...(investmentData.revenueY5 ? [{ metric: 'REVENUE', quarterIndex: 4, value: investmentData.revenueY5 }] : []),
-              
-              // COGS metrics
-              ...(investmentData.cogsY1 ? [{ metric: 'COGS', quarterIndex: 0, value: investmentData.cogsY1 }] : []),
-              ...(investmentData.cogsY2 ? [{ metric: 'COGS', quarterIndex: 1, value: investmentData.cogsY2 }] : []),
-              ...(investmentData.cogsY3 ? [{ metric: 'COGS', quarterIndex: 2, value: investmentData.cogsY3 }] : []),
-              ...(investmentData.cogsY4 ? [{ metric: 'COGS', quarterIndex: 3, value: investmentData.cogsY4 }] : []),
-              ...(investmentData.cogsY5 ? [{ metric: 'COGS', quarterIndex: 4, value: investmentData.cogsY5 }] : []),
-              
-              // EBITDA metrics
-              ...(investmentData.ebitdaY1 ? [{ metric: 'EBITDA', quarterIndex: 0, value: investmentData.ebitdaY1 }] : []),
-              ...(investmentData.ebitdaY2 ? [{ metric: 'EBITDA', quarterIndex: 1, value: investmentData.ebitdaY2 }] : []),
-              ...(investmentData.ebitdaY3 ? [{ metric: 'EBITDA', quarterIndex: 2, value: investmentData.ebitdaY3 }] : []),
-              ...(investmentData.ebitdaY4 ? [{ metric: 'EBITDA', quarterIndex: 3, value: investmentData.ebitdaY4 }] : []),
-              ...(investmentData.ebitdaY5 ? [{ metric: 'EBITDA', quarterIndex: 4, value: investmentData.ebitdaY5 }] : []),
-            ]
-          }
-        }
-      });
-    }
+    // Forecast creation removed for MVP - returning preview data only
 
-    // Create audit log entry
-    await prisma.auditLog.create({
-      data: {
-        investmentId: investment.id,
-        action: 'INVESTMENT_CREATED',
-        rationale: 'Investment created from Excel template import',
-        changedBy: 'System',
-      }
-    });
-
+    // Return success response with preview data
     res.status(201).json({
       success: true,
       data: {
         investmentId: investment.id,
         companyName: investment.companyName,
-        message: 'Investment created successfully from Excel template'
-      },
-      errors: []
+        message: "Investment created successfully from Excel template (preview mode)"
+      }
     });
-
-  } catch (error: any) {
-    console.error('Excel template import error:', error);
+  } catch (error) {
+    console.error("Excel template import error:", error);
     res.status(500).json({
       success: false,
-      errors: [`Failed to import Excel template: ${error.message}`],
+      errors: ["Internal server error during Excel template processing"],
       preview: null
     });
   }
 }));
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-// Start server and test database connection
-async function startServer() {
-  console.log('🚀 Starting HTTP server...');
-  
-  const server = app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log('✅ Backend server running on port', PORT);
-    console.log('🌐 Server address: http://0.0.0.0:' + PORT);
-    console.log('🏥 Health check: http://0.0.0.0:' + PORT + '/health');
-  });
-
-  server.on('error', (err: any) => {
-    console.error('❌ Server error:', err);
-    if (err.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} is already in use`);
-    }
-    process.exit(1);
-  });
-
-  // Test database connection AFTER server starts
-  try {
-    console.log('🔍 Testing database connection...');
-    await prisma.$connect();
-    console.log('✅ Database connected successfully!');
-  } catch (error) {
-    console.error('❌ Failed to connect to database:', error);
-    console.error('📋 DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET');
-    console.error('⚠️  Server is running but database is unavailable!');
-  }
-
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    console.log('👋 SIGTERM received, closing server...');
-    await prisma.$disconnect();
-    server.close(() => {
-      console.log('✅ Server closed');
-      process.exit(0);
-    });
-  });
-}
-
-startServer().catch((err) => {
-  console.error('❌ Fatal error starting server:', err);
-  process.exit(1);
-});
-
-
