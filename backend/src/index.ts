@@ -217,37 +217,62 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
   if (activeFlags >= 3) status = 'RED';
   else if (activeFlags >= 1) status = 'AMBER';
 
+  // Prepare forecast data grouped by metric
+  const forecastMetrics = investment.forecasts[0]?.metrics || [];
+  const forecastData = {
+    revenue: forecastMetrics.filter(m => m.metric === 'REVENUE').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    burn: forecastMetrics.filter(m => m.metric === 'BURN').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    traction: forecastMetrics.filter(m => m.metric === 'TRACTION').map(m => ({ quarterIndex: m.quarterIndex, value: m.value }))
+  };
+
+  // Prepare actuals data from founder updates
+  const actualsData = {
+    revenue: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualRevenue })),
+    burn: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualBurn })),
+    traction: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualTraction })),
+    runway: investment.founderUpdates.map(u => ({ quarter: u.quarterIndex, value: u.actualRunwayMonths }))
+  };
+
   const transformed = {
-    id: investment.id,
-    companyName: investment.companyName,
-    sector: investment.sector,
-    stage: investment.stage,
-    // geography: investment.geography, // Field removed
-    investmentType: investment.investmentType,
-    committedCapitalLcl: investment.committedCapitalLcl,
-    deployedCapitalLcl: investment.deployedCapitalLcl,
-    ownershipPercent: investment.ownershipPercent,
-    investmentDate: investment.investmentExecutionDate.toISOString().split('T')[0],
-    currentFairValueEur: investment.currentFairValueEur,
-    grossMoic: grossMoic,
-    grossIrr: '0.00',
-    roundSizeEur: investment.roundSizeEur,
-    enterpriseValueEur: investment.enterpriseValueEur,
-    status: status,
-    activeFlags: activeFlags,
-    founders: investment.founders.map(f => ({
-      name: f.name,
-      email: f.email
-    })),
-    raisedFollowOnCapital: investment.raisedFollowOnCapital,
-    clearProductMarketFit: investment.clearProductMarketFit,
-    meaningfulRevenue: investment.meaningfulRevenue,
-    founderUpdates: investment.founderUpdates.map(u => ({
+    investment: {
+      id: investment.id,
+      icReference: investment.icReference,
+      icApprovalDate: investment.icApprovalDate.toISOString(),
+      investmentExecutionDate: investment.investmentExecutionDate.toISOString(),
+      dealOwner: investment.dealOwner || 'N/A',
+      companyName: investment.companyName,
+      sector: investment.sector,
+      geography: investment.geography || 'N/A',
+      stage: investment.stage,
+      investmentType: investment.investmentType,
+      committedCapitalLcl: investment.committedCapitalLcl,
+      deployedCapitalLcl: investment.deployedCapitalLcl,
+      ownershipPercent: investment.ownershipPercent,
+      coInvestors: investment.coInvestors,
+      hasBoardSeat: investment.hasBoardSeat,
+      hasProRataRights: investment.hasProRataRights,
+      hasAntiDilutionProtection: investment.hasAntiDilutionProtection,
+      localCurrency: investment.localCurrency,
+      investmentFxRate: investment.investmentFxRate,
+      valuationFxRate: investment.valuationFxRate,
+      roundSizeEur: investment.roundSizeEur,
+      enterpriseValueEur: investment.enterpriseValueEur,
+      currentFairValueEur: investment.currentFairValueEur,
+      raisedFollowOnCapital: investment.raisedFollowOnCapital,
+      clearProductMarketFit: investment.clearProductMarketFit,
+      meaningfulRevenue: investment.meaningfulRevenue,
+      status: investment.status,
+      founders: investment.founders.map(f => ({
+        name: f.name,
+        email: f.email
+      }))
+    },
+    forecast: forecastData,
+    actuals: actualsData,
+    updates: investment.founderUpdates.map(u => ({
       id: u.id,
       quarterIndex: u.quarterIndex,
-      dueDate: u.dueDate.toISOString().split('T')[0],
-      submittedAt: u.submittedAt.toISOString().split('T')[0],
-      status: u.status,
+      submittedAt: u.submittedAt.toISOString(),
       actualRevenue: u.actualRevenue,
       actualBurn: u.actualBurn,
       actualRunwayMonths: u.actualRunwayMonths,
@@ -255,19 +280,6 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
       narrativeGood: u.narrativeGood,
       narrativeBad: u.narrativeBad,
       narrativeHelp: u.narrativeHelp
-    })),
-    forecasts: investment.forecasts.map(f => ({
-      id: f.id,
-      version: f.version,
-      startQuarter: f.startQuarter.toISOString().split('T')[0],
-      horizonQuarters: f.horizonQuarters,
-      rationale: f.rationale,
-      metrics: f.metrics.map(m => ({
-        id: m.id,
-        metric: m.metric,
-        quarterIndex: m.quarterIndex,
-        value: m.value
-      }))
     })),
     flags: investment.flags.map(f => ({
       id: f.id,
@@ -278,7 +290,7 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
       forecastValue: f.forecastValue,
       deltaPct: f.deltaPct,
       status: f.status,
-      createdAt: f.createdAt.toISOString().split('T')[0]
+      createdAt: f.createdAt.toISOString()
     }))
   };
 
