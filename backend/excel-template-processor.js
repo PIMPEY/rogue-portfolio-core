@@ -126,7 +126,8 @@ class ExcelTemplateProcessor {
       'Snapshot Date': 'snapshotDate',
       'Cash at Snapshot': 'cashAtSnapshot',
       'Customers at Snapshot': 'customersAtSnapshot',
-      
+      'ARR at Snapshot': 'arrAtSnapshot',
+
       'Liquidity Expectation': 'liquidityExpectation',
       'Expected Liquidity Date': 'expectedLiquidityDate',
       'Expected Liquidity Multiple': 'expectedLiquidityMultiple',
