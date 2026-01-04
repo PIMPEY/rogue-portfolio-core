@@ -96,7 +96,7 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
       })
       .then(data => {
         // Ensure data is always an array
-        const investmentsArray = data.investments || \[\];
+        const investmentsArray = data.investments || [];
         setInvestments(investmentsArray);
         setLoading(false);
       })
