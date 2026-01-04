@@ -87,7 +87,7 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
   const [chartFilter, setChartFilter] = useState<{ type: 'sector' | 'stage' | 'geography' | 'status' | null; value: string | null }>({ type: null, value: null });
 
   useEffect(() => {
-    fetch(${BACKEND_URL}/api/investments)
+    fetch(`${BACKEND_URL}/api/investments`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Backend returned ${res.status}`);

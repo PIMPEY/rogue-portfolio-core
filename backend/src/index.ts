@@ -629,25 +629,25 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
           create: [
             // Revenue Y1-Y5
             ...[1, 2, 3, 4, 5].map(year => ({
-              metric: 'REVENUE',
+              metric: 'REVENUE' as const,
               quarterIndex: year,
               value: investmentData[`revenueY${year}`] || 0
             })),
             // COGS Y1-Y5
             ...[1, 2, 3, 4, 5].map(year => ({
-              metric: 'COGS',
+              metric: 'COGS' as const,
               quarterIndex: year,
               value: investmentData[`cogsY${year}`] || 0
             })),
             // OPEX Y1-Y5
             ...[1, 2, 3, 4, 5].map(year => ({
-              metric: 'OPEX',
+              metric: 'OPEX' as const,
               quarterIndex: year,
               value: investmentData[`opexY${year}`] || 0
             })),
             // EBITDA Y1-Y5
             ...[1, 2, 3, 4, 5].map(year => ({
-              metric: 'EBITDA',
+              metric: 'EBITDA' as const,
               quarterIndex: year,
               value: investmentData[`ebitdaY${year}`] || 0
             }))
