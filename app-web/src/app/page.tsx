@@ -109,8 +109,7 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
   }, []);
 
   useEffect(() => {
-    const allColumns: Column[] = [      { key: 'delete', label: 'Actions', visible: true, sortable: false },
-
+    const allColumns: Column[] = [
       { key: 'companyName', label: 'Company', visible: true, sortable: true },
       { key: 'sector', label: 'Sector', visible: true, sortable: true },
       { key: 'stage', label: 'Stage', visible: true, sortable: true },
@@ -132,7 +131,8 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
       { key: 'founderLinkedIns', label: 'Founder LinkedIn', visible: true, sortable: false },
       { key: 'raisedFollowOnCapital', label: 'Raised Follow-on', visible: true, sortable: false },
       { key: 'clearProductMarketFit', label: 'PMF', visible: true, sortable: false },
-      { key: 'meaningfulRevenue', label: 'Meaningful Revenue', visible: true, sortable: false }
+      { key: 'meaningfulRevenue', label: 'Meaningful Revenue', visible: true, sortable: false },
+      { key: 'delete', label: '', visible: true, sortable: false }
     ];
     setColumns(allColumns);
   }, []);
@@ -309,9 +309,10 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
       return (
         <button
           onClick={() => handleDelete(inv.id, inv.companyName)}
-          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+          className="text-red-600 hover:text-red-800 text-xl font-bold"
+          title="Delete investment"
         >
-          Delete
+          ✕
         </button>
       );
     }
