@@ -33,7 +33,7 @@ interface Investment {
   latestUpdateQuarter: number;
 }
 
-type ColumnKey = keyof Investment | 'founderNames' | 'founderLinkedIns';
+type ColumnKey = keyof Investment | 'founderNames' | 'founderLinkedIns' | 'delete';
 
 interface Column {
   key: ColumnKey;
