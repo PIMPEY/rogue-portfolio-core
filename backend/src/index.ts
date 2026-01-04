@@ -646,6 +646,7 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
         companyName: investmentData.companyName,
         sector: investmentData.sector,
         stage: investmentData.stage,
+        geography: investmentData.geography,
         investmentType: investmentData.investmentType,
         committedCapitalLcl: investmentData.committedCapitalLcl,
         ownershipPercent: investmentData.ownershipPercent,
