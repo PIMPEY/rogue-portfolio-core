@@ -93,6 +93,10 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     flags: Flag[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     params.then(p => setId(p.id)).catch(err => {
@@ -119,6 +123,70 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
         setLoading(false);
       });
   }, [id]);
+
+  const handleExcelUpload = async (file: File) => {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      setUploadError('Please upload an Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('investmentId', id);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/templates/import`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.errors?.[0] || 'Upload failed');
+      }
+
+      const result = await response.json();
+      setUploadSuccess(`✓ Success! Created ${result.data.forecastMetricsCreated} forecast metrics for ${result.data.companyName}`);
+
+      // Refresh the data after 1.5 seconds
+      setTimeout(() => {
+        fetch(`${BACKEND_URL}/api/investments/${id}`)
+          .then(res => res.json())
+          .then(data => setData(data))
+          .catch(err => console.error('Error refreshing data:', err));
+      }, 1500);
+
+    } catch (error: any) {
+      setUploadError(error.message || 'Failed to upload Excel file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleExcelUpload(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -233,6 +301,90 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
                 <span className={`h-3 w-3 rounded-full ${getStatusColor(investment.status)} mr-2`} />
                 <span className="text-lg font-semibold text-gray-900">{investment.status.replace('_', ' ')}</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Excel Upload Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border-2 border-dashed border-blue-300 p-6 mb-8">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">📊 Upload Forecast Data</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload an Excel template with Y1-Y5 projections (Revenue, COGS, OPEX, EBITDA) to populate forecast charts
+              </p>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                  dragActive
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => e.target.files?.[0] && handleExcelUpload(e.target.files[0])}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploading}
+                />
+
+                {uploading ? (
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                    <p className="text-sm font-medium text-gray-700">Processing Excel file...</p>
+                  </div>
+                ) : (
+                  <div>
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="mt-2 text-sm font-medium text-gray-900">
+                      {dragActive ? 'Drop Excel file here' : 'Drag and drop Excel file here'}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">or click to browse</p>
+                    <p className="mt-3 text-xs text-gray-400">Supports .xlsx and .xls files</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Success/Error Messages */}
+              {uploadSuccess && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start">
+                  <svg className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-green-800">{uploadSuccess}</p>
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                  <svg className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-red-800">{uploadError}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Download Template Link */}
+            <div className="ml-6 flex-shrink-0">
+              <a
+                href="/templates/investment-forecast-template.xlsx"
+                download
+                className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Template
+              </a>
             </div>
           </div>
         </div>
