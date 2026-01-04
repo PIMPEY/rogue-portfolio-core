@@ -140,7 +140,7 @@ app.get('/api/portfolio', asyncHandler(async (req, res) => {
       companyName: inv.companyName,
       sector: inv.sector,
       stage: inv.stage,
-      // geography: inv.geography, // Field removed
+      geography: inv.geography || 'N/A',
       investmentType: inv.investmentType,
       committedCapitalEur: inv.committedCapitalLcl,
       deployedCapitalEur: inv.deployedCapitalLcl,
@@ -208,7 +208,7 @@ app.get('/api/investments', asyncHandler(async (req, res) => {
       companyName: inv.companyName,
       sector: inv.sector,
       stage: inv.stage,
-      geography: 'N/A', // Field removed from schema
+      geography: inv.geography || 'N/A',
       investmentType: inv.investmentType,
       committedCapitalEur: inv.committedCapitalLcl,
       deployedCapitalEur: inv.deployedCapitalLcl,

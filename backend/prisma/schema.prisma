@@ -127,7 +127,8 @@ model Investment {
   companyName               String
   sector                    String
   stage                     InvestmentStage
-   
+  geography                 String?
+
   investmentType            InvestmentType
   committedCapitalLcl       Float
   deployedCapitalLcl        Float               @default(0)

@@ -4,8 +4,9 @@ class ExcelTemplateProcessor {
   constructor() {
     this.requiredSummaryFields = [
       'companyName',
-      'sector', 
+      'sector',
       'stage',
+      'geography',
       'investmentType',
       'committedCapitalLcl',
       'ownershipPercent',
