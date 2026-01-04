@@ -735,6 +735,92 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
   }
 }));
 
+// Download Excel template endpoint
+app.get('/api/templates/download', asyncHandler(async (req, res) => {
+  const XLSX = require('xlsx');
+
+  // Create a new workbook
+  const workbook = XLSX.utils.book_new();
+
+  // Sheet 1: Company Summary
+  const summaryData = [
+    ['Investment Forecast Template', '', '', ''],
+    ['', '', '', ''],
+    ['Company Information', '', '', ''],
+    ['Field', 'Value', 'Required', 'Notes'],
+    ['companyName', 'Example Corp', 'Yes', 'Company legal name'],
+    ['sector', 'Fintech', 'Yes', 'e.g., Fintech, Healthcare, AI/ML'],
+    ['stage', 'SEED', 'Yes', 'SEED, SERIES_A, SERIES_B, SERIES_C, GROWTH, PRE_IPO'],
+    ['geography', 'Europe', 'Yes', 'Geographic region'],
+    ['investmentType', 'EQUITY', 'Yes', 'EQUITY, CONVERTIBLE_NOTE, SAFE'],
+    ['committedCapitalLcl', '500000', 'Yes', 'Amount in local currency'],
+    ['ownershipPercent', '15.5', 'No', 'Ownership percentage'],
+    ['roundSizeEur', '3000000', 'No', 'Total round size in EUR'],
+    ['enterpriseValueEur', '20000000', 'No', 'Enterprise value in EUR'],
+    ['currentFairValueEur', '500000', 'Yes', 'Current fair market value'],
+    ['', '', '', ''],
+    ['Snapshot Data', '', '', ''],
+    ['snapshotDate', '2026-01-01', 'No', 'Date of snapshot (YYYY-MM-DD)'],
+    ['cashAtSnapshot', '1200000', 'No', 'Cash balance at snapshot'],
+    ['customersAtSnapshot', '150', 'No', 'Number of customers'],
+    ['arrAtSnapshot', '600000', 'No', 'Annual Recurring Revenue'],
+    ['liquidityExpectation', 'Series A in 12-18 months', 'No', 'Expected liquidity event']
+  ];
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+  // Sheet 2: Projections (Y1-Y5)
+  const projectionsData = [
+    ['Annual Projections (Y1-Y5)', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['Metric', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
+    ['revenueY1', '100000', '', '', '', ''],
+    ['revenueY2', '', '250000', '', '', ''],
+    ['revenueY3', '', '', '500000', '', ''],
+    ['revenueY4', '', '', '', '1000000', ''],
+    ['revenueY5', '', '', '', '', '2000000'],
+    ['', '', '', '', '', ''],
+    ['cogsY1', '30000', '', '', '', ''],
+    ['cogsY2', '', '75000', '', '', ''],
+    ['cogsY3', '', '', '150000', '', ''],
+    ['cogsY4', '', '', '', '300000', ''],
+    ['cogsY5', '', '', '', '', '600000'],
+    ['', '', '', '', '', ''],
+    ['opexY1', '200000', '', '', '', ''],
+    ['opexY2', '', '300000', '', '', ''],
+    ['opexY3', '', '', '400000', '', ''],
+    ['opexY4', '', '', '', '500000', ''],
+    ['opexY5', '', '', '', '', '600000'],
+    ['', '', '', '', '', ''],
+    ['ebitdaY1', '-130000', '', '', '', ''],
+    ['ebitdaY2', '', '-125000', '', '', ''],
+    ['ebitdaY3', '', '', '-50000', '', ''],
+    ['ebitdaY4', '', '', '', '200000', ''],
+    ['ebitdaY5', '', '', '', '', '800000'],
+    ['', '', '', '', '', ''],
+    ['Notes:', '', '', '', '', ''],
+    ['- All values in EUR', '', '', '', '', ''],
+    ['- Revenue: Total annual revenue', '', '', '', '', ''],
+    ['- COGS: Cost of Goods Sold', '', '', '', '', ''],
+    ['- OPEX: Operating Expenses', '', '', '', '', ''],
+    ['- EBITDA: Earnings before interest, taxes, depreciation, and amortization', '', '', '', '', '']
+  ];
+
+  const projectionsSheet = XLSX.utils.aoa_to_sheet(projectionsData);
+  projectionsSheet['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(workbook, projectionsSheet, 'Projections');
+
+  // Generate buffer
+  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+  // Send file
+  res.setHeader('Content-Disposition', 'attachment; filename="investment-forecast-template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buffer);
+}));
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
