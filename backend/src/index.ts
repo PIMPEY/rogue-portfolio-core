@@ -177,9 +177,64 @@ app.get('/api/portfolio', asyncHandler(async (req, res) => {
 
 app.get('/api/investments', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({
+    include: {
+      founders: true,
+      flags: true,
+      founderUpdates: true,
+    },
     orderBy: { createdAt: 'desc' },
   });
-  res.json({ investments });
+
+  // Transform to match frontend expectations
+  const transformed = investments.map(inv => {
+    const grossMoic = inv.committedCapitalLcl > 0
+      ? (inv.currentFairValueEur / inv.committedCapitalLcl).toFixed(2)
+      : '0.00';
+
+    const grossIrr = '0.00';
+
+    const activeFlags = inv.flags.filter(f => f.status !== 'RESOLVED').length;
+    let status = 'GREEN';
+    if (activeFlags >= 3) status = 'RED';
+    else if (activeFlags >= 1) status = 'AMBER';
+
+    const totalUpdates = inv.founderUpdates.length;
+    const latestUpdateQuarter = totalUpdates > 0
+      ? Math.max(...inv.founderUpdates.map(u => u.quarterIndex))
+      : 0;
+
+    return {
+      id: inv.id,
+      companyName: inv.companyName,
+      sector: inv.sector,
+      stage: inv.stage,
+      geography: inv.geography || 'N/A',
+      investmentType: inv.investmentType,
+      committedCapitalEur: inv.committedCapitalLcl,
+      deployedCapitalEur: inv.deployedCapitalLcl,
+      ownershipPercent: inv.ownershipPercent,
+      investmentDate: inv.investmentExecutionDate.toISOString().split('T')[0],
+      currentFairValueEur: inv.currentFairValueEur,
+      grossMoic: grossMoic,
+      grossIrr: grossIrr,
+      roundSizeEur: inv.roundSizeEur,
+      enterpriseValueEur: inv.enterpriseValueEur,
+      runway: null,
+      status: status,
+      activeFlags: activeFlags,
+      founders: inv.founders.map(f => ({
+        name: f.name,
+        email: f.email
+      })),
+      raisedFollowOnCapital: inv.raisedFollowOnCapital,
+      clearProductMarketFit: inv.clearProductMarketFit,
+      meaningfulRevenue: inv.meaningfulRevenue,
+      totalUpdates: totalUpdates,
+      latestUpdateQuarter: latestUpdateQuarter,
+    };
+  });
+
+  res.json({ investments: transformed });
 }));
 
 app.get('/api/investments/:id', asyncHandler(async (req, res) => {
