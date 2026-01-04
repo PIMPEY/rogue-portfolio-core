@@ -110,7 +110,8 @@ class ExcelTemplateProcessor {
     const fieldMappings = {
       'Company Name': 'companyName',
       'Sector': 'sector',
-      'Stage': 'stage', 
+      'Stage': 'stage',
+      'Geography': 'geography',
       'Investment Type': 'investmentType',
       'Committed Capital (Local)': 'committedCapitalLcl',
       'Ownership %': 'ownershipPercent',
