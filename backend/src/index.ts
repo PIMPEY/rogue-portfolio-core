@@ -208,7 +208,7 @@ app.get('/api/investments', asyncHandler(async (req, res) => {
       companyName: inv.companyName,
       sector: inv.sector,
       stage: inv.stage,
-      geography: inv.geography || 'N/A',
+      geography: 'N/A', // Field removed from schema
       investmentType: inv.investmentType,
       committedCapitalEur: inv.committedCapitalLcl,
       deployedCapitalEur: inv.deployedCapitalLcl,
