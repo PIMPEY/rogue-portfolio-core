@@ -179,7 +179,7 @@ app.get('/api/investments', asyncHandler(async (req, res) => {
   const investments = await prisma.investment.findMany({
     orderBy: { createdAt: 'desc' },
   });
-  res.json(investments);
+  res.json({ investments });
 }));
 
 app.get('/api/investments/:id', asyncHandler(async (req, res) => {
