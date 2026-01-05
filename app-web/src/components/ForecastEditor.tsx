@@ -30,7 +30,7 @@ const METRIC_ROWS: MetricRow[] = [
   { label: 'OPEX', key: 'opex', color: 'bg-purple-50' },
   { label: 'CAPEX', key: 'capex', color: 'bg-pink-50' },
   { label: 'EBITDA', key: 'ebitda', color: 'bg-green-50' },
-  { label: 'Monthly Burn', key: 'burn', color: 'bg-cyan-50' },
+  { label: 'Cash Balance', key: 'burn', color: 'bg-cyan-50' },
 ];
 
 export default function ForecastEditor({ investmentId, existingData, onSave }: ForecastEditorProps) {
