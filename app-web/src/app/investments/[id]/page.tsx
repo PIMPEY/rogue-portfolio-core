@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  ReferenceLine,
   Tooltip,
   Legend,
   ResponsiveContainer
@@ -37,6 +38,11 @@ interface Investment {
   roundSizeEur: number | null;
   enterpriseValueEur: number | null;
   currentFairValueEur: number;
+  calculatedRunwayMonths: number | null;
+  cashAtSnapshot: number | null;
+  snapshotDate: string | null;
+  liquidityExpectation: string | null;
+  expectedLiquidityDate: string | null;
   raisedFollowOnCapital: boolean;
   clearProductMarketFit: boolean;
   meaningfulRevenue: boolean;
@@ -46,6 +52,9 @@ interface Investment {
 
 interface ForecastData {
   revenue: Array<{ quarterIndex: number; value: number }>;
+  cogs: Array<{ quarterIndex: number; value: number }>;
+  opex: Array<{ quarterIndex: number; value: number }>;
+  ebitda: Array<{ quarterIndex: number; value: number }>;
   burn: Array<{ quarterIndex: number; value: number }>;
   traction: Array<{ quarterIndex: number; value: number }>;
 }
@@ -389,13 +398,23 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Current Runway</h3>
             <div className="text-2xl font-bold text-gray-900">
-              {actuals.runway.length > 0 
+              {actuals.runway.length > 0
                 ? `${actuals.runway[actuals.runway.length - 1].value.toFixed(1)} months`
-                : 'N/A'}
+                : investment.calculatedRunwayMonths
+                  ? `${investment.calculatedRunwayMonths.toFixed(1)} months`
+                  : 'N/A'}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">ETA Next Fundraise</h3>
+            <div className="text-2xl font-bold text-gray-900">
+              {investment.expectedLiquidityDate
+                ? new Date(investment.expectedLiquidityDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+                : investment.liquidityExpectation || 'N/A'}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
@@ -406,9 +425,23 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Latest Update</h3>
-            <div className="text-2xl font-bold text-gray-900">
-              Q{updates.length > 0 ? updates[updates.length - 1].quarterIndex : 'N/A'}
+            <div className={`text-2xl font-bold ${
+              (() => {
+                const daysSinceInvestment = Math.floor((new Date().getTime() - new Date(investment.investmentExecutionDate).getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = updates.length === 0 && daysSinceInvestment > 90;
+                return isOverdue ? 'text-red-600' : 'text-gray-900';
+              })()
+            }`}>
+              {updates.length > 0
+                ? `Q${updates[updates.length - 1].quarterIndex}`
+                : (() => {
+                    const daysSinceInvestment = Math.floor((new Date().getTime() - new Date(investment.investmentExecutionDate).getTime()) / (1000 * 60 * 60 * 24));
+                    return daysSinceInvestment > 90 ? 'OVERDUE' : `${daysSinceInvestment}d`;
+                  })()}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {updates.length === 0 && 'First update due 90 days after investment'}
+            </p>
           </div>
         </div>
 
@@ -444,16 +477,82 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Traction: Forecast vs Actual</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">COGS (Cost of Goods Sold)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={prepareChartData(forecast.traction, actuals.traction)}>
+              <LineChart data={forecast.cogs.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
                 <Legend />
-                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" />
-                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} name="Actual" />
+                <Line type="monotone" dataKey="forecast" stroke="#f59e0b" strokeWidth={2} name="COGS Forecast" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">OPEX (Operating Expenses)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecast.opex.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#8b5cf6" strokeWidth={2} name="OPEX Forecast" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">EBITDA (Profitability Path)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecast.ebitda.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#10b981" strokeWidth={2} name="EBITDA Forecast" />
+                <ReferenceLine y={0} stroke="#000" strokeDasharray="3 3" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Cash Balance Over Time</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={(() => {
+                const cashData = [];
+                let cumulativeBurn = 0;
+                const cashAtSnapshot = investment.cashAtSnapshot || 0;
+
+                // Start with cash at snapshot
+                if (investment.snapshotDate) {
+                  cashData.push({
+                    quarter: 'Snapshot',
+                    balance: cashAtSnapshot
+                  });
+                }
+
+                // Calculate cumulative burn from forecast
+                forecast.burn.forEach((b, index) => {
+                  cumulativeBurn += b.value;
+                  cashData.push({
+                    quarter: `Y${b.quarterIndex}`,
+                    balance: cashAtSnapshot - cumulativeBurn
+                  });
+                });
+
+                return cashData;
+              })()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="balance" stroke="#06b6d4" strokeWidth={2} name="Cash Balance" />
+                <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" label="Zero Cash" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -468,6 +567,21 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
                 <Tooltip formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(1)} months` : 'N/A'} />
                 <Legend />
                 <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} name="Runway (months)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Traction: Forecast vs Actual</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={prepareChartData(forecast.traction, actuals.traction)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" />
+                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} name="Actual" />
               </LineChart>
             </ResponsiveContainer>
           </div>
