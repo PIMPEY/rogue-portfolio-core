@@ -2,30 +2,37 @@ const XLSX = require('xlsx');
 
 class ExcelTemplateProcessor {
   constructor() {
-    this.requiredSummaryFields = [
+    // Tier 1: MUST HAVE - Core investment identity (blocks import)
+    this.tier1Required = [
       'companyName',
       'sector',
       'stage',
-      'geography',
       'investmentType',
       'committedCapitalLcl',
-      'ownershipPercent',
-      'roundSizeEur',
-      'enterpriseValueEur',
-      'currentFairValueEur',
-      'snapshotDate',
-      'cashAtSnapshot',
-      'customersAtSnapshot',
-      'arrAtSnapshot',
-      'liquidityExpectation'
+      'currentFairValueEur'
     ];
 
-    this.requiredProjectionFields = [
+    // Tier 2: SHOULD HAVE - Financial projections (warns but allows)
+    this.tier2Projections = [
       'revenueY1', 'revenueY2', 'revenueY3', 'revenueY4', 'revenueY5',
       'cogsY1', 'cogsY2', 'cogsY3', 'cogsY4', 'cogsY5',
       'opexY1', 'opexY2', 'opexY3', 'opexY4', 'opexY5',
       'ebitdaY1', 'ebitdaY2', 'ebitdaY3', 'ebitdaY4', 'ebitdaY5'
     ];
+
+    // Tier 3: NICE TO HAVE - Optional enrichment (auto-filled if missing)
+    this.tier3Defaults = {
+      'currency': 'EUR',
+      'geography': 'Unknown',
+      'ownershipPercent': null,
+      'roundSizeEur': null,
+      'enterpriseValueEur': null,
+      'snapshotDate': null,
+      'cashAtSnapshot': null,
+      'customersAtSnapshot': null,
+      'liquidityExpectation': null,
+      'monthlyBurn': null
+    };
   }
 
   async processExcelBuffer(buffer) {
@@ -71,26 +78,31 @@ class ExcelTemplateProcessor {
         ...projectionsData
       };
 
-      // Validate the combined data
-      const validation = this.validateData(combinedData);
-      
+      // Apply Tier 3 defaults for missing optional fields
+      const dataWithDefaults = this.applyDefaults(combinedData);
+
+      // Validate the combined data with three-tier system
+      const validation = this.validateData(dataWithDefaults);
+
       if (!validation.isValid) {
         return {
           success: false,
           errors: validation.errors,
-          preview: this.createPreview(combinedData)
+          warnings: validation.warnings,
+          preview: this.createPreview(dataWithDefaults)
         };
       }
 
       // Calculate runway if needed
-      const runwayCalculation = this.calculateRunway(combinedData);
-      
+      const runwayCalculation = this.calculateRunway(dataWithDefaults);
+
       return {
         success: true,
         data: {
-          ...combinedData,
+          ...dataWithDefaults,
           ...runwayCalculation
         },
+        warnings: validation.warnings,
         errors: []
       };
 
@@ -126,7 +138,6 @@ class ExcelTemplateProcessor {
       'Snapshot Date': 'snapshotDate',
       'Cash at Snapshot': 'cashAtSnapshot',
       'Customers at Snapshot': 'customersAtSnapshot',
-      'ARR at Snapshot': 'arrAtSnapshot',
 
       'Liquidity Expectation': 'liquidityExpectation',
       'Expected Liquidity Date': 'expectedLiquidityDate',
@@ -230,58 +241,58 @@ class ExcelTemplateProcessor {
     return value;
   }
 
+  applyDefaults(data) {
+    // Apply Tier 3 defaults for any missing optional fields
+    const result = { ...data };
+
+    for (const [field, defaultValue] of Object.entries(this.tier3Defaults)) {
+      if (result[field] === null || result[field] === undefined || result[field] === '') {
+        result[field] = defaultValue;
+      }
+    }
+
+    return result;
+  }
+
   validateData(data) {
     const errors = [];
-    
-    // Check required Summary fields
-    for (const field of this.requiredSummaryFields) {
+    const warnings = [];
+
+    // TIER 1: Check core required fields (blocks import)
+    for (const field of this.tier1Required) {
       if (data[field] === null || data[field] === undefined || data[field] === "") {
         errors.push(`Missing required field: ${field}`);
       }
     }
-    
-    // Validate currency field
-    if (!data.currency || data.currency === "") {
-      errors.push("Currency is required");
+
+    // TIER 2: Check projection fields (warns but allows)
+    const missingProjections = this.tier2Projections.filter(field =>
+      data[field] === null || data[field] === undefined || data[field] === ""
+    );
+
+    if (missingProjections.length > 0) {
+      warnings.push(`Missing ${missingProjections.length} projection fields - forecast charts will be incomplete`);
     }
-    
-    // Validate entry valuation
-    if (!data.entryValuation || data.entryValuation <= 0) {
-      errors.push("Entry valuation must be greater than 0");
-    }
-    
-    // Validate isPostMoney boolean
-    if (data.isPostMoney === undefined || data.isPostMoney === null) {
-      errors.push("isPostMoney field is required (true/false)");
-    }
-    
-    // Validate liquidity year (1-5 relative)
-    if (data.expectedLiquidityYear) {
-      const liquidityYear = parseInt(data.expectedLiquidityYear);
-      if (isNaN(liquidityYear) || liquidityYear < 1 || liquidityYear > 5) {
-        errors.push("Expected Liquidity Year must be between 1 and 5 (relative years)");
+
+    // Additional validation only if Tier 1 passed
+    if (errors.length === 0) {
+      // Validate stage enum
+      const validStages = ['PRE_SEED', 'SEED', 'SERIES_A', 'SERIES_B', 'SERIES_C', 'SERIES_D_PLUS', 'GROWTH', 'OTHER'];
+      if (data.stage && !validStages.includes(data.stage.toUpperCase().replace(/[-\s]/g, '_'))) {
+        warnings.push(`Stage "${data.stage}" may not match expected values. Valid: ${validStages.join(', ')}`);
+      }
+
+      // Validate investment type enum
+      const validTypes = ['SAFE', 'CLN', 'EQUITY', 'OTHER'];
+      if (data.investmentType && !validTypes.includes(data.investmentType.toUpperCase())) {
+        warnings.push(`Investment type "${data.investmentType}" may not match expected values. Valid: ${validTypes.join(', ')}`);
       }
     }
-    
-    // Check if runway calculation is required
-    const y1Revenue = data.revenueY1 || 0;
-    const y1Ebitda = data.ebitdaY1 || 0;
-    
-    const runwayRequired = (y1Revenue === 0 || y1Revenue === null || y1Revenue === undefined) || 
-                          (y1Ebitda < 0);
-    
-    if (runwayRequired) {
-      if (!data.monthlyBurn || data.monthlyBurn <= 0) {
-        errors.push("Monthly burn is required when Y1 revenue is 0/blank or Y1 EBITDA is negative");
-      }
-      if (!data.snapshotDate) {
-        errors.push("Snapshot date is required for runway calculation");
-      }
-    }
-    
+
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
+      warnings
     };
   }
 

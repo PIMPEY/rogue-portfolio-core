@@ -742,38 +742,40 @@ app.get('/api/templates/download', asyncHandler(async (req, res) => {
   // Create a new workbook
   const workbook = XLSX.utils.book_new();
 
-  // Sheet 1: Company Summary
+  // Sheet 1: Company Summary (Three-Tier Validation)
   const summaryData = [
-    ['Investment Forecast Template', '', '', ''],
+    ['Investment Forecast Template - Simplified', '', '', ''],
     ['', '', '', ''],
-    ['Company Information', '', '', ''],
+    ['TIER 1: Core Required Fields', '', '', ''],
     ['Field', 'Value', 'Required', 'Notes'],
-    ['Company Name', 'Example Corp', 'Yes', 'Company legal name'],
-    ['Sector', 'Fintech', 'Yes', 'e.g., Fintech, Healthcare, AI/ML'],
-    ['Stage', 'SEED', 'Yes', 'SEED, SERIES_A, SERIES_B, SERIES_C, GROWTH, PRE_IPO'],
-    ['Geography', 'Europe', 'Yes', 'Geographic region'],
-    ['Investment Type', 'EQUITY', 'Yes', 'EQUITY, CONVERTIBLE_NOTE, SAFE'],
-    ['Committed Capital (Local)', '500000', 'Yes', 'Amount in local currency'],
+    ['Company Name', 'Example Corp', 'YES', 'Company legal name'],
+    ['Sector', 'Fintech', 'YES', 'e.g., Fintech, Healthcare, AI/ML'],
+    ['Stage', 'SEED', 'YES', 'PRE_SEED, SEED, SERIES_A, SERIES_B, etc.'],
+    ['Investment Type', 'EQUITY', 'YES', 'SAFE, CLN, EQUITY, OTHER'],
+    ['Committed Capital (Local)', '500000', 'YES', 'Amount invested in local currency'],
+    ['Current Fair Value (EUR)', '500000', 'YES', 'Current fair market value in EUR'],
+    ['', '', '', ''],
+    ['TIER 3: Optional Fields (Auto-filled if blank)', '', '', ''],
+    ['Currency', 'EUR', 'No', 'Defaults to EUR if blank'],
+    ['Geography', 'Europe', 'No', 'Defaults to Unknown if blank'],
     ['Ownership %', '15.5', 'No', 'Ownership percentage'],
     ['Round Size (EUR)', '3000000', 'No', 'Total round size in EUR'],
     ['Enterprise Value (EUR)', '20000000', 'No', 'Enterprise value in EUR'],
-    ['Current Fair Value (EUR)', '500000', 'Yes', 'Current fair market value'],
-    ['', '', '', ''],
-    ['Snapshot Data', '', '', ''],
     ['Snapshot Date', '2026-01-01', 'No', 'Date of snapshot (YYYY-MM-DD)'],
     ['Cash at Snapshot', '1200000', 'No', 'Cash balance at snapshot'],
     ['Customers at Snapshot', '150', 'No', 'Number of customers'],
-    ['ARR at Snapshot', '600000', 'No', 'Annual Recurring Revenue'],
-    ['Liquidity Expectation', 'Series A in 12-18 months', 'No', 'Expected liquidity event']
+    ['Liquidity Expectation', 'Series A in 12-18 months', 'No', 'Expected liquidity event'],
+    ['Monthly Burn', '100000', 'No', 'Monthly cash burn rate']
   ];
 
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
   summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 40 }];
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-  // Sheet 2: Projections (Y1-Y5)
+  // Sheet 2: Projections (Y1-Y5) - TIER 2
   const projectionsData = [
-    ['Annual Projections (Y1-Y5)', '', '', '', '', ''],
+    ['TIER 2: Annual Projections (Recommended for Charts)', '', '', '', '', ''],
+    ['Missing projections will trigger warnings but allow import', '', '', '', '', ''],
     ['', '', '', '', '', ''],
     ['Metric', 'Value', '', '', '', ''],
     ['Revenue Y1', '100000', '', '', '', ''],
@@ -802,7 +804,8 @@ app.get('/api/templates/download', asyncHandler(async (req, res) => {
     ['', '', '', '', '', ''],
     ['Notes:', '', '', '', '', ''],
     ['- All values in EUR', '', '', '', '', ''],
-    ['- Enter values in Column B (Value column)', '', '', '', '', ''],
+    ['- Enter values in Column B only', '', '', '', '', ''],
+    ['- Leave blank if no projections available', '', '', '', '', ''],
     ['- Revenue: Total annual revenue', '', '', '', '', ''],
     ['- COGS: Cost of Goods Sold', '', '', '', '', ''],
     ['- OPEX: Operating Expenses', '', '', '', '', ''],
