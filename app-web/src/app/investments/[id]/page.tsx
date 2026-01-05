@@ -46,6 +46,7 @@ interface Investment {
   snapshotDate: string | null;
   liquidityExpectation: string | null;
   expectedLiquidityDate: string | null;
+  monthlyBurn: number | null;
   raisedFollowOnCapital: boolean;
   clearProductMarketFit: boolean;
   meaningfulRevenue: boolean;
