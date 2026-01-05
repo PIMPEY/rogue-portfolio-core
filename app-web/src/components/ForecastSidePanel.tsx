@@ -5,13 +5,12 @@ import { useState } from 'react';
 interface ForecastSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
-  investmentId: string;
   onUpdate: () => void;
 }
 
 type Scenario = 'base' | 'bull' | 'bear';
 
-export default function ForecastSidePanel({ isOpen, onClose, investmentId, onUpdate }: ForecastSidePanelProps) {
+export default function ForecastSidePanel({ isOpen, onClose, onUpdate }: ForecastSidePanelProps) {
   const [scenario, setScenario] = useState<Scenario>('base');
   const [icPassword, setIcPassword] = useState('');
   const [showIcOverride, setShowIcOverride] = useState(false);

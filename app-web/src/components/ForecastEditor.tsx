@@ -106,7 +106,7 @@ export default function ForecastEditor({ investmentId, existingData, onSave }: F
         throw new Error(error.message || 'Failed to save forecast');
       }
 
-      const result = await response.json();
+      await response.json();
       setSaveSuccess(true);
       setLastUpdated(new Date().toLocaleString());
 
@@ -116,8 +116,8 @@ export default function ForecastEditor({ investmentId, existingData, onSave }: F
         setSaveSuccess(false);
       }, 2000);
 
-    } catch (error: any) {
-      setSaveError(error.message || 'Failed to save forecast data');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save forecast data');
     } finally {
       setSaving(false);
     }

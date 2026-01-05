@@ -5,8 +5,6 @@ import Link from 'next/link';
 import {
   LineChart,
   Line,
-  Scatter,
-  ScatterChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,7 +12,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ComposedChart
 } from 'recharts';
 import ForecastEditor from '@/components/ForecastEditor';
 import ForecastSidePanel from '@/components/ForecastSidePanel';
@@ -113,7 +110,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [showEditor, setShowEditor] = useState(true);
+  const [showEditor] = useState(true);
   const [showExcelUpload, setShowExcelUpload] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
 
@@ -145,6 +142,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleExcelUpload = async (file: File) => {
@@ -183,8 +181,8 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           .catch(err => console.error('Error refreshing data:', err));
       }, 1500);
 
-    } catch (error: any) {
-      setUploadError(error.message || 'Failed to upload Excel file');
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload Excel file');
     } finally {
       setUploading(false);
     }
@@ -769,7 +767,6 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
         <ForecastSidePanel
           isOpen={showSidePanel}
           onClose={() => setShowSidePanel(false)}
-          investmentId={id}
           onUpdate={refreshData}
         />
       </div>
