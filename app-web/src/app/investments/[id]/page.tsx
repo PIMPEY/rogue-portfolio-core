@@ -5,13 +5,16 @@ import Link from 'next/link';
 import {
   LineChart,
   Line,
+  Scatter,
+  ScatterChart,
   XAxis,
   YAxis,
   CartesianGrid,
   ReferenceLine,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ComposedChart
 } from 'recharts';
 
 interface Investment {
@@ -54,6 +57,7 @@ interface ForecastData {
   revenue: Array<{ quarterIndex: number; value: number }>;
   cogs: Array<{ quarterIndex: number; value: number }>;
   opex: Array<{ quarterIndex: number; value: number }>;
+  capex: Array<{ quarterIndex: number; value: number }>;
   ebitda: Array<{ quarterIndex: number; value: number }>;
   burn: Array<{ quarterIndex: number; value: number }>;
   traction: Array<{ quarterIndex: number; value: number }>;

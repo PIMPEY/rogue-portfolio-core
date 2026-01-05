@@ -278,6 +278,7 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
     revenue: forecastMetrics.filter(m => m.metric === 'REVENUE').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     cogs: forecastMetrics.filter(m => m.metric === 'COGS').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     opex: forecastMetrics.filter(m => m.metric === 'OPEX').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
+    capex: forecastMetrics.filter(m => m.metric === 'CAPEX').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     ebitda: forecastMetrics.filter(m => m.metric === 'EBITDA').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     burn: forecastMetrics.filter(m => m.metric === 'BURN').map(m => ({ quarterIndex: m.quarterIndex, value: m.value })),
     traction: forecastMetrics.filter(m => m.metric === 'TRACTION').map(m => ({ quarterIndex: m.quarterIndex, value: m.value }))
@@ -706,6 +707,12 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
               quarterIndex: year,
               value: investmentData[`opexY${year}`] || 0
             })),
+            // CAPEX Y1-Y5
+            ...[1, 2, 3, 4, 5].map(year => ({
+              metric: 'CAPEX' as const,
+              quarterIndex: year,
+              value: investmentData[`capexY${year}`] || 0
+            })),
             // EBITDA Y1-Y5
             ...[1, 2, 3, 4, 5].map(year => ({
               metric: 'EBITDA' as const,
@@ -801,6 +808,12 @@ app.get('/api/templates/download', asyncHandler(async (req, res) => {
     ['OPEX Y4', '500000', '', '', '', ''],
     ['OPEX Y5', '600000', '', '', '', ''],
     ['', '', '', '', '', ''],
+    ['CAPEX Y1', '50000', '', '', '', ''],
+    ['CAPEX Y2', '100000', '', '', '', ''],
+    ['CAPEX Y3', '150000', '', '', '', ''],
+    ['CAPEX Y4', '200000', '', '', '', ''],
+    ['CAPEX Y5', '50000', '', '', '', ''],
+    ['', '', '', '', '', ''],
     ['EBITDA Y1', '-130000', '', '', '', ''],
     ['EBITDA Y2', '-125000', '', '', '', ''],
     ['EBITDA Y3', '-50000', '', '', '', ''],
@@ -814,6 +827,7 @@ app.get('/api/templates/download', asyncHandler(async (req, res) => {
     ['- Revenue: Total annual revenue', '', '', '', '', ''],
     ['- COGS: Cost of Goods Sold', '', '', '', '', ''],
     ['- OPEX: Operating Expenses', '', '', '', '', ''],
+    ['- CAPEX: Capital Expenditures (e.g., GPUs, hardware)', '', '', '', '', ''],
     ['- EBITDA: Earnings before interest, taxes, depreciation, and amortization', '', '', '', '', '']
   ];
 

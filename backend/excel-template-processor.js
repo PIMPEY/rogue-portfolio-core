@@ -17,6 +17,7 @@ class ExcelTemplateProcessor {
       'revenueY1', 'revenueY2', 'revenueY3', 'revenueY4', 'revenueY5',
       'cogsY1', 'cogsY2', 'cogsY3', 'cogsY4', 'cogsY5',
       'opexY1', 'opexY2', 'opexY3', 'opexY4', 'opexY5',
+      'capexY1', 'capexY2', 'capexY3', 'capexY4', 'capexY5',
       'ebitdaY1', 'ebitdaY2', 'ebitdaY3', 'ebitdaY4', 'ebitdaY5'
     ];
 
@@ -186,6 +187,13 @@ class ExcelTemplateProcessor {
       'OPEX Y3': 'opexY3',
       'OPEX Y4': 'opexY4',
       'OPEX Y5': 'opexY5',
+
+      'CAPEX Y1': 'capexY1',
+      'CAPEX Y2': 'capexY2',
+      'CAPEX Y3': 'capexY3',
+      'CAPEX Y4': 'capexY4',
+      'CAPEX Y5': 'capexY5',
+
       'EBITDA Y1': 'ebitdaY1',
       'EBITDA Y2': 'ebitdaY2',
       'EBITDA Y3': 'ebitdaY3',

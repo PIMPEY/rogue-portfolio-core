@@ -114,6 +114,7 @@ enum MetricType {
   HEADCOUNT
   COGS
   OPEX
+  CAPEX
   EBITDA
 }
 
