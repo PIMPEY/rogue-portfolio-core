@@ -16,6 +16,8 @@ import {
   ResponsiveContainer,
   ComposedChart
 } from 'recharts';
+import ForecastEditor from '@/components/ForecastEditor';
+import ForecastSidePanel from '@/components/ForecastSidePanel';
 
 interface Investment {
   id: string;
@@ -111,6 +113,9 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [showEditor, setShowEditor] = useState(true);
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
 
   useEffect(() => {
     params.then(p => setId(p.id)).catch(err => {
@@ -119,7 +124,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     });
   }, [params]);
 
-  useEffect(() => {
+  const refreshData = () => {
     if (!id) return;
     fetch(`${BACKEND_URL}/api/investments/${id}`)
       .then(res => {
@@ -136,6 +141,10 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
         console.error('Error fetching investment:', err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    refreshData();
   }, [id]);
 
   const handleExcelUpload = async (file: File) => {
@@ -319,14 +328,64 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        {/* Excel Upload Section */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border-2 border-dashed border-blue-300 p-6 mb-8">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">📊 Upload Forecast Data</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Upload an Excel template with Y1-Y5 projections (Revenue, COGS, OPEX, EBITDA) to populate forecast charts
+        {/* Forecast Editor Section */}
+        {showEditor && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Forecast Management</h2>
+                <p className="text-sm text-gray-500 mt-1">Edit forecast data directly or use quick adjustments</p>
+              </div>
+              <button
+                onClick={() => setShowSidePanel(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Quick Adjustments
+              </button>
+            </div>
+            <ForecastEditor
+              investmentId={id}
+              existingData={{
+                revenue: forecast.revenue,
+                cogs: forecast.cogs,
+                opex: forecast.opex,
+                capex: forecast.capex,
+                ebitda: forecast.ebitda,
+              }}
+              onSave={refreshData}
+            />
+          </div>
+        )}
+
+        {/* Excel Upload Section - Collapsible */}
+        <div className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <button
+            onClick={() => setShowExcelUpload(!showExcelUpload)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-100 transition-colors rounded-lg"
+          >
+            <div>
+              <h2 className="text-sm font-medium text-gray-700">Advanced: Bulk Import from Excel</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                For advanced users or large datasets - upload an Excel template with Y1-Y5 projections
               </p>
+            </div>
+            <svg
+              className={`h-5 w-5 text-gray-500 transition-transform ${showExcelUpload ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showExcelUpload && (
+            <div className="px-6 pb-6 pt-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
 
               {/* Drag and Drop Zone */}
               <div
@@ -385,22 +444,24 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
                   <p className="text-sm text-red-800">{uploadError}</p>
                 </div>
               )}
-            </div>
+                </div>
 
-            {/* Download Template Link */}
-            <div className="ml-6 flex-shrink-0">
-              <a
-                href={`${BACKEND_URL}/api/templates/download`}
-                download="investment-forecast-template.xlsx"
-                className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download Template
-              </a>
+                {/* Download Template Link */}
+                <div className="ml-6 flex-shrink-0">
+                  <a
+                    href={`${BACKEND_URL}/api/templates/download`}
+                    download="investment-forecast-template.xlsx"
+                    className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Template
+                  </a>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
@@ -703,6 +764,14 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
             </div>
           </div>
         </div>
+
+        {/* Side Panel for Quick Adjustments */}
+        <ForecastSidePanel
+          isOpen={showSidePanel}
+          onClose={() => setShowSidePanel(false)}
+          investmentId={id}
+          onUpdate={refreshData}
+        />
       </div>
     </div>
   );

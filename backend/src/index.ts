@@ -747,6 +747,70 @@ app.post("/api/templates/import", upload.single('file'), asyncHandler(async (req
   }
 }));
 
+// Manual forecast entry endpoint
+app.post("/api/investments/:id/forecast/manual", asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { metrics } = req.body;
+
+  // Validate investment exists
+  const investment = await prisma.investment.findUnique({
+    where: { id }
+  });
+
+  if (!investment) {
+    return res.status(404).json({
+      success: false,
+      message: "Investment not found"
+    });
+  }
+
+  // Validate metrics array
+  if (!Array.isArray(metrics)) {
+    return res.status(400).json({
+      success: false,
+      message: "Metrics must be an array"
+    });
+  }
+
+  // Delete existing forecasts for this investment
+  await prisma.forecast.deleteMany({
+    where: { investmentId: id }
+  });
+
+  // Determine horizon from the data
+  const maxQuarter = Math.max(...metrics.map(m => m.quarterIndex), 0);
+
+  // Create new forecast with manual entry source
+  const forecast = await prisma.forecast.create({
+    data: {
+      investmentId: id,
+      version: 1,
+      startQuarter: new Date(),
+      horizonQuarters: maxQuarter,
+      rationale: 'Manual data entry via forecast editor',
+      metrics: {
+        create: metrics.map(m => ({
+          metric: m.metric,
+          quarterIndex: m.quarterIndex,
+          value: m.value
+        }))
+      }
+    },
+    include: {
+      metrics: true
+    }
+  });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      forecastId: forecast.id,
+      metricsCreated: forecast.metrics.length,
+      message: "Forecast saved successfully"
+    }
+  });
+}));
+
 // Download Excel template endpoint
 app.get('/api/templates/download', asyncHandler(async (req, res) => {
   const XLSX = require('xlsx');
