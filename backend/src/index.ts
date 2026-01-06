@@ -361,6 +361,33 @@ app.get('/api/investments/:id', asyncHandler(async (req, res) => {
   res.json(transformed);
 }));
 
+// Delete investment endpoint
+app.delete('/api/investments/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Check if investment exists
+  const investment = await prisma.investment.findUnique({
+    where: { id }
+  });
+
+  if (!investment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Investment not found'
+    });
+  }
+
+  // Delete the investment (cascade will handle related records)
+  await prisma.investment.delete({
+    where: { id }
+  });
+
+  res.json({
+    success: true,
+    message: `Investment ${investment.companyName} deleted successfully`
+  });
+}));
+
 app.post('/api/investments', authenticate, requireChangeRationale, asyncHandler(async (req: ChangeRationaleRequest & AuthRequest, res) => {
   const { rationale } = req;
   const changedBy = req.user?.name || 'Unknown';
