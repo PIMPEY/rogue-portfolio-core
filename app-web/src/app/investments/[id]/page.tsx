@@ -353,6 +353,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
                 capex: forecast.capex,
                 ebitda: forecast.ebitda,
                 burn: forecast.burn,
+                traction: forecast.traction,
               }}
               onSave={refreshData}
             />

@@ -11,11 +11,12 @@ interface ForecastEditorProps {
     capex: Array<{ quarterIndex: number; value: number }>;
     ebitda: Array<{ quarterIndex: number; value: number }>;
     burn: Array<{ quarterIndex: number; value: number }>;
+    traction: Array<{ quarterIndex: number; value: number }>;
   };
   onSave: () => void;
 }
 
-type MetricType = 'revenue' | 'cogs' | 'opex' | 'capex' | 'ebitda' | 'burn';
+type MetricType = 'revenue' | 'cogs' | 'opex' | 'capex' | 'ebitda' | 'burn' | 'traction';
 type Horizon = 1 | 3 | 5;
 
 interface MetricRow {
@@ -31,6 +32,7 @@ const METRIC_ROWS: MetricRow[] = [
   { label: 'CAPEX', key: 'capex', color: 'bg-pink-50' },
   { label: 'EBITDA', key: 'ebitda', color: 'bg-green-50' },
   { label: 'Cash Balance', key: 'burn', color: 'bg-cyan-50' },
+  { label: 'Customers', key: 'traction', color: 'bg-indigo-50' },
 ];
 
 export default function ForecastEditor({ investmentId, existingData, onSave }: ForecastEditorProps) {
@@ -43,6 +45,7 @@ export default function ForecastEditor({ investmentId, existingData, onSave }: F
     capex: [],
     ebitda: [],
     burn: [],
+    traction: [],
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -59,6 +62,7 @@ export default function ForecastEditor({ investmentId, existingData, onSave }: F
       capex: Array(quarters).fill(0),
       ebitda: Array(quarters).fill(0),
       burn: Array(quarters).fill(0),
+      traction: Array(quarters).fill(0),
     };
 
     // Populate from existing data
