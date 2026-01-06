@@ -8,10 +8,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  ReferenceLine,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
+import ForecastEditor from '@/components/ForecastEditor';
+import ForecastSidePanel from '@/components/ForecastSidePanel';
 
 interface Investment {
   id: string;
@@ -37,6 +40,12 @@ interface Investment {
   roundSizeEur: number | null;
   enterpriseValueEur: number | null;
   currentFairValueEur: number;
+  calculatedRunwayMonths: number | null;
+  cashAtSnapshot: number | null;
+  snapshotDate: string | null;
+  liquidityExpectation: string | null;
+  expectedLiquidityDate: string | null;
+  monthlyBurn: number | null;
   raisedFollowOnCapital: boolean;
   clearProductMarketFit: boolean;
   meaningfulRevenue: boolean;
@@ -46,6 +55,10 @@ interface Investment {
 
 interface ForecastData {
   revenue: Array<{ quarterIndex: number; value: number }>;
+  cogs: Array<{ quarterIndex: number; value: number }>;
+  opex: Array<{ quarterIndex: number; value: number }>;
+  capex: Array<{ quarterIndex: number; value: number }>;
+  ebitda: Array<{ quarterIndex: number; value: number }>;
   burn: Array<{ quarterIndex: number; value: number }>;
   traction: Array<{ quarterIndex: number; value: number }>;
 }
@@ -83,6 +96,7 @@ interface Update {
 }
 
 export default function InvestmentDetail({ params }: { params: Promise<{ id: string }> }) {
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
   const [id, setId] = useState<string>('');
   const [data, setData] = useState<{
     investment: Investment;
@@ -92,6 +106,13 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     flags: Flag[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [showEditor] = useState(true);
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
 
   useEffect(() => {
     params.then(p => setId(p.id)).catch(err => {
@@ -100,9 +121,9 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     });
   }, [params]);
 
-  useEffect(() => {
+  const refreshData = () => {
     if (!id) return;
-    fetch(`/api/investments/${id}`)
+    fetch(`${BACKEND_URL}/api/investments/${id}`)
       .then(res => {
         if (!res.ok) {
           throw new Error('Investment not found');
@@ -117,7 +138,76 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
         console.error('Error fetching investment:', err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const handleExcelUpload = async (file: File) => {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      setUploadError('Please upload an Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('investmentId', id);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/templates/import`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.errors?.[0] || 'Upload failed');
+      }
+
+      const result = await response.json();
+      setUploadSuccess(`✓ Success! Created ${result.data.forecastMetricsCreated} forecast metrics for ${result.data.companyName}`);
+
+      // Refresh the data after 1.5 seconds
+      setTimeout(() => {
+        fetch(`${BACKEND_URL}/api/investments/${id}`)
+          .then(res => res.json())
+          .then(data => setData(data))
+          .catch(err => console.error('Error refreshing data:', err));
+      }, 1500);
+
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload Excel file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleExcelUpload(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -155,18 +245,19 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   };
 
   const prepareChartData = (forecast: Array<{ quarterIndex: number; value: number }>, actual: Array<{ quarter: number; value: number }>) => {
-    const maxQuarter = Math.max(
+    const maxPeriod = Math.max(
       ...forecast.map(f => f.quarterIndex),
-      ...actual.map(a => a.quarter)
+      ...actual.map(a => a.quarter),
+      0
     );
 
     const data = [];
-    for (let q = 1; q <= maxQuarter; q++) {
-      const forecastPoint = forecast.find(f => f.quarterIndex === q);
-      const actualPoint = actual.find(a => a.quarter === q);
-      
+    for (let period = 1; period <= maxPeriod; period++) {
+      const forecastPoint = forecast.find(f => f.quarterIndex === period);
+      const actualPoint = actual.find(a => a.quarter === period);
+
       data.push({
-        quarter: `Q${q}`,
+        quarter: `Y${period}`,
         forecast: forecastPoint?.value || null,
         actual: actualPoint?.value || null
       });
@@ -235,13 +326,182 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Forecast Editor Section */}
+        {showEditor && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Forecast Management</h2>
+                <p className="text-sm text-gray-500 mt-1">Edit forecast data directly or use quick adjustments</p>
+              </div>
+              <button
+                onClick={() => setShowSidePanel(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Quick Adjustments
+              </button>
+            </div>
+            <ForecastEditor
+              investmentId={id}
+              existingData={{
+                revenue: forecast.revenue,
+                cogs: forecast.cogs,
+                opex: forecast.opex,
+                capex: forecast.capex,
+                ebitda: forecast.ebitda,
+                burn: forecast.burn,
+                traction: forecast.traction,
+              }}
+              onSave={refreshData}
+            />
+          </div>
+        )}
+
+        {/* Excel Upload Section - Collapsible */}
+        <div className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 mb-8">
+          <button
+            onClick={() => setShowExcelUpload(!showExcelUpload)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-100 transition-colors rounded-lg"
+          >
+            <div>
+              <h2 className="text-sm font-medium text-gray-700">Advanced: Bulk Import from Excel</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                For advanced users or large datasets - upload an Excel template with Y1-Y5 projections
+              </p>
+            </div>
+            <svg
+              className={`h-5 w-5 text-gray-500 transition-transform ${showExcelUpload ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showExcelUpload && (
+            <div className="px-6 pb-6 pt-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                  dragActive
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => e.target.files?.[0] && handleExcelUpload(e.target.files[0])}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploading}
+                />
+
+                {uploading ? (
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                    <p className="text-sm font-medium text-gray-700">Processing Excel file...</p>
+                  </div>
+                ) : (
+                  <div>
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="mt-2 text-sm font-medium text-gray-900">
+                      {dragActive ? 'Drop Excel file here' : 'Drag and drop Excel file here'}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">or click to browse</p>
+                    <p className="mt-3 text-xs text-gray-400">Supports .xlsx and .xls files</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Success/Error Messages */}
+              {uploadSuccess && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start">
+                  <svg className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-green-800">{uploadSuccess}</p>
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                  <svg className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-red-800">{uploadError}</p>
+                </div>
+              )}
+                </div>
+
+                {/* Download Template Link */}
+                <div className="ml-6 flex-shrink-0">
+                  <a
+                    href={`${BACKEND_URL}/api/templates/download`}
+                    download="investment-forecast-template.xlsx"
+                    className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Template
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Current Runway</h3>
             <div className="text-2xl font-bold text-gray-900">
-              {actuals.runway.length > 0 
+              {actuals.runway.length > 0
                 ? `${actuals.runway[actuals.runway.length - 1].value.toFixed(1)} months`
-                : 'N/A'}
+                : investment.calculatedRunwayMonths
+                  ? `${investment.calculatedRunwayMonths.toFixed(1)} months`
+                  : 'N/A'}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">ETA Next Fundraise</h3>
+            <div className="text-2xl font-bold text-gray-900">
+              {(() => {
+                if (investment.expectedLiquidityDate) {
+                  const date = new Date(investment.expectedLiquidityDate);
+                  const quarter = `Q${Math.floor(date.getMonth() / 3) + 1}`;
+                  const year = date.getFullYear();
+                  const round = investment.stage === 'SEED' ? 'Series A' :
+                                investment.stage === 'SERIES_A' ? 'Series B' :
+                                investment.stage === 'SERIES_B' ? 'Series C' : 'Next Round';
+                  return `${round} - ${quarter} ${year}`;
+                }
+                // Calculate 6 months before runway expires
+                if (investment.calculatedRunwayMonths) {
+                  const fundraiseMonths = Math.max(0, investment.calculatedRunwayMonths - 6);
+                  const today = new Date();
+                  const fundraiseDate = new Date(today.setMonth(today.getMonth() + fundraiseMonths));
+                  const quarter = `Q${Math.floor(fundraiseDate.getMonth() / 3) + 1}`;
+                  const year = fundraiseDate.getFullYear();
+                  const round = investment.stage === 'SEED' ? 'Series A' :
+                                investment.stage === 'SERIES_A' ? 'Series B' :
+                                investment.stage === 'SERIES_B' ? 'Series C' : 'Next Round';
+                  return `${round} - ${quarter} ${year}`;
+                }
+                return investment.liquidityExpectation || 'N/A';
+              })()}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
@@ -252,9 +512,23 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Latest Update</h3>
-            <div className="text-2xl font-bold text-gray-900">
-              Q{updates.length > 0 ? updates[updates.length - 1].quarterIndex : 'N/A'}
+            <div className={`text-2xl font-bold ${
+              (() => {
+                const daysSinceInvestment = Math.floor((new Date().getTime() - new Date(investment.investmentExecutionDate).getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = updates.length === 0 && daysSinceInvestment > 90;
+                return isOverdue ? 'text-red-600' : 'text-gray-900';
+              })()
+            }`}>
+              {updates.length > 0
+                ? `Q${updates[updates.length - 1].quarterIndex}`
+                : (() => {
+                    const daysSinceInvestment = Math.floor((new Date().getTime() - new Date(investment.investmentExecutionDate).getTime()) / (1000 * 60 * 60 * 24));
+                    return daysSinceInvestment > 90 ? 'OVERDUE' : `${daysSinceInvestment}d`;
+                  })()}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {updates.length === 0 && 'First update due 90 days after investment'}
+            </p>
           </div>
         </div>
 
@@ -265,55 +539,126 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
               <LineChart data={prepareChartData(forecast.revenue, actuals.revenue)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
                 <Legend />
-                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" />
-                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} name="Actual" />
+                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={0} name="Actual" dot={{ r: 6, fill: '#10b981' }} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Burn: Forecast vs Actual</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">COGS (Cost of Goods Sold)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={prepareChartData(forecast.burn, actuals.burn)}>
+              <LineChart data={forecast.cogs.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
                 <Legend />
-                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" />
-                <Line type="monotone" dataKey="actual" stroke="#ef4444" strokeWidth={2} name="Actual" />
+                <Line type="monotone" dataKey="forecast" stroke="#f59e0b" strokeWidth={2} name="COGS Forecast" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Traction: Forecast vs Actual</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">OPEX (Operating Expenses)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={prepareChartData(forecast.traction, actuals.traction)}>
+              <LineChart data={forecast.opex.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
-                <YAxis />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#8b5cf6" strokeWidth={2} name="OPEX Forecast" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">CAPEX (Capital Expenditures)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecast.capex.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#ec4899" strokeWidth={2} name="CAPEX Forecast" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">EBITDA (Profitability Path)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecast.ebitda.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="forecast" stroke="#10b981" strokeWidth={2} name="EBITDA Forecast" />
+                <ReferenceLine y={0} stroke="#000" strokeDasharray="3 3" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Cash Balance</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={(() => {
+                const cashData = [];
+                const startingCash = investment.cashAtSnapshot || 1200000; // Default €1.2M
+                const monthlyBurn = investment.monthlyBurn || 66667; // €800k/year = €66.7k/mo
+
+                // Generate 18 months of cash depletion
+                for (let month = 0; month <= 18; month++) {
+                  const remainingCash = Math.max(0, startingCash - (monthlyBurn * month));
+                  cashData.push({
+                    quarter: `M${month}`,
+                    balance: remainingCash
+                  });
+                }
+
+                return cashData;
+              })()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" label={{ value: 'Months', position: 'insideBottom', offset: -5 }} />
+                <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+                <Legend />
+                <Line type="monotone" dataKey="balance" stroke="#06b6d4" strokeWidth={2} name="Cash Balance" />
+                <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" label="Zero Cash" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Traction (Customer Count)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={(() => {
+                // Generate dummy customer growth: 10 → 500 over 18 months
+                const tractionData = [];
+                for (let month = 0; month <= 18; month++) {
+                  // Exponential growth curve
+                  const customers = Math.floor(10 * Math.pow(1.25, month));
+                  tractionData.push({
+                    quarter: `M${month}`,
+                    forecast: customers,
+                    actual: month <= 6 ? customers + Math.floor(Math.random() * 10 - 5) : null // Actuals for first 6 months
+                  });
+                }
+                return tractionData;
+              })()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" label={{ value: 'Months', position: 'insideBottom', offset: -5 }} />
+                <YAxis label={{ value: 'Customers', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" />
-                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} name="Actual" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Runway Over Time</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={actuals.runway.map(r => ({ quarter: `Q${r.quarter}`, value: r.value }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="quarter" />
-                <YAxis />
-                <Tooltip formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(1)} months` : 'N/A'} />
-                <Legend />
-                <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} name="Runway (months)" />
+                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast Growth" dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={0} name="Actual" dot={{ r: 6, fill: '#10b981' }} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -419,6 +764,13 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
             </div>
           </div>
         </div>
+
+        {/* Side Panel for Quick Adjustments */}
+        <ForecastSidePanel
+          isOpen={showSidePanel}
+          onClose={() => setShowSidePanel(false)}
+          onUpdate={refreshData}
+        />
       </div>
     </div>
   );

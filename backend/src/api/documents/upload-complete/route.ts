@@ -1,4 +1,3 @@
-import { NextResponse } from 'express';
 import { prisma } from '../../../lib/prisma';
 import { calculateChecksum } from '../../../lib/crypto';
 

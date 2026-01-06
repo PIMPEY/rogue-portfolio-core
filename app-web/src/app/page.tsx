@@ -3,8 +3,8 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import PortfolioCharts from '@/components/PortfolioCharts';
-import ActionsPanel from '@/components/ActionsPanel';
+// import PortfolioCharts from '@/components/PortfolioCharts';
+// import ActionsPanel from '@/components/ActionsPanel';
 
 interface Investment {
   id: string;
@@ -33,7 +33,7 @@ interface Investment {
   latestUpdateQuarter: number;
 }
 
-type ColumnKey = keyof Investment | 'founderNames' | 'founderLinkedIns';
+type ColumnKey = keyof Investment | 'founderNames' | 'founderLinkedIns' | 'delete';
 
 interface Column {
   key: ColumnKey;
@@ -46,7 +46,7 @@ type ViewPreset = 'ALL' | 'IC' | 'FINANCE' | 'RISK';
 
 const VIEW_PRESETS: Record<ViewPreset, ColumnKey[]> = {
   ALL: [
-    'companyName', 'sector', 'stage', 'geography', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'geography', 'investmentType',
     'committedCapitalEur', 'deployedCapitalEur', 'ownershipPercent',
     'investmentDate', 'currentFairValueEur', 'grossMoic', 'grossIrr',
     'roundSizeEur', 'enterpriseValueEur', 'runway', 'status', 'activeFlags',
@@ -54,25 +54,26 @@ const VIEW_PRESETS: Record<ViewPreset, ColumnKey[]> = {
     'clearProductMarketFit', 'meaningfulRevenue'
   ],
   IC: [
-    'companyName', 'sector', 'stage', 'geography', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'geography', 'investmentType',
     'committedCapitalEur', 'ownershipPercent', 'investmentDate',
     'currentFairValueEur', 'grossMoic', 'runway', 'status', 'activeFlags',
     'founderNames', 'raisedFollowOnCapital', 'clearProductMarketFit',
     'meaningfulRevenue'
   ],
   FINANCE: [
-    'companyName', 'sector', 'stage', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'investmentType',
     'committedCapitalEur', 'deployedCapitalEur', 'ownershipPercent',
     'investmentDate', 'currentFairValueEur', 'grossMoic', 'grossIrr',
     'roundSizeEur', 'enterpriseValueEur', 'runway', 'status'
   ],
   RISK: [
-    'companyName', 'sector', 'stage', 'runway', 'status', 'activeFlags',
+    'delete', 'companyName', 'sector', 'stage', 'runway', 'status', 'activeFlags',
     'grossMoic', 'grossIrr', 'investmentDate', 'founderNames'
   ]
 };
 
-export default function PortfolioDashboard() {
+export default function PortfolioDashboard() {  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
   const router = useRouter();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +87,7 @@ export default function PortfolioDashboard() {
   const [chartFilter, setChartFilter] = useState<{ type: 'sector' | 'stage' | 'geography' | 'status' | null; value: string | null }>({ type: null, value: null });
 
   useEffect(() => {
-    fetch('/api/portfolio')
+    fetch(`${BACKEND_URL}/api/investments`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Backend returned ${res.status}`);
@@ -95,7 +96,7 @@ export default function PortfolioDashboard() {
       })
       .then(data => {
         // Ensure data is always an array
-        const investmentsArray = Array.isArray(data) ? data : [];
+        const investmentsArray = data.investments || [];
         setInvestments(investmentsArray);
         setLoading(false);
       })
@@ -130,7 +131,8 @@ export default function PortfolioDashboard() {
       { key: 'founderLinkedIns', label: 'Founder LinkedIn', visible: true, sortable: false },
       { key: 'raisedFollowOnCapital', label: 'Raised Follow-on', visible: true, sortable: false },
       { key: 'clearProductMarketFit', label: 'PMF', visible: true, sortable: false },
-      { key: 'meaningfulRevenue', label: 'Meaningful Revenue', visible: true, sortable: false }
+      { key: 'meaningfulRevenue', label: 'Meaningful Revenue', visible: true, sortable: false },
+      { key: 'delete', label: '', visible: true, sortable: false }
     ];
     setColumns(allColumns);
   }, []);
@@ -269,6 +271,28 @@ export default function PortfolioDashboard() {
     a.click();
     URL.revokeObjectURL(url);
   };
+  const handleDelete = async (id: string, companyName: string) => {
+    if (!confirm(`Are you sure you want to delete ${companyName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/investments/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete investment');
+      }
+
+      // Remove the investment from the state
+      setInvestments(prev => prev.filter(inv => inv.id !== id));
+    } catch (error) {
+      console.error('Error deleting investment:', error);
+      alert('Failed to delete investment. Please try again.');
+    }
+  };
+
 
   const exportToJSON = () => {
     const jsonContent = JSON.stringify(investments, null, 2);
@@ -281,7 +305,18 @@ export default function PortfolioDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const getCellValue = (inv: Investment, columnKey: ColumnKey): React.ReactNode => {
+  const getCellValue = (inv: Investment, columnKey: ColumnKey): React.ReactNode => {    if (columnKey === 'delete') {
+      return (
+        <button
+          onClick={() => handleDelete(inv.id, inv.companyName)}
+          className="text-red-600 hover:text-red-800 text-xl font-bold"
+          title="Delete investment"
+        >
+          ✕
+        </button>
+      );
+    }
+
     if (columnKey === 'founderNames') {
       return inv.founders.map(f => f.name).join(', ');
     }
@@ -459,14 +494,14 @@ export default function PortfolioDashboard() {
         </div>
 
         <div className="mb-8">
-          <ActionsPanel />
+          {/* <ActionsPanel /> */}
         </div>
 
-        <PortfolioCharts
+        {/* <PortfolioCharts
           investments={investments}
           onFilter={handleChartFilter}
           activeFilter={chartFilter}
-        />
+        /> */}
 
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">

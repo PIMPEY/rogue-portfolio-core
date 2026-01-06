@@ -162,7 +162,7 @@ export default function CreateInvestment() {
   };
 
   const calculateChecksum = async (data: Uint8Array): Promise<string> => {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };

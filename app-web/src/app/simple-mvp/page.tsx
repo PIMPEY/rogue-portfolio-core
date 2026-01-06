@@ -19,10 +19,17 @@ interface AnalysisResult {
   risks: string[];
   opportunities: string[];
   summary: string;
+  extractedData?: any;
+  dataQuality?: {
+    score: number;
+    completeness: number;
+    confidence: number;
+    warnings: string[];
+  };
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+const ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
 
 export default function SimpleMVP() {
   const [investment, setInvestment] = useState({
@@ -30,7 +37,7 @@ export default function SimpleMVP() {
     sector: '',
     stage: 'SEED',
     committedCapital: '',
-    dealOwner: '',
+    currency: 'EUR', localEquivalent: '',
   });
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -40,6 +47,7 @@ export default function SimpleMVP() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showReviewPopup, setShowReviewPopup] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setInvestment({ ...investment, [e.target.name]: e.target.value });
@@ -48,7 +56,7 @@ export default function SimpleMVP() {
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `File type "${file.type}" is not supported. Please upload PDF, DOC, DOCX, or TXT files.`;
+      return `File type "${file.type}" is not supported. Please upload PDF, DOC, DOCX, TXT, XLS, or XLSX files.`;
     }
     if (file.size > MAX_FILE_SIZE) {
       return `File "${file.name}" exceeds the 10MB limit.`;
@@ -116,8 +124,8 @@ export default function SimpleMVP() {
   };
 
   const createInvestment = async () => {
-    if (!investment.companyName || !investment.committedCapital) {
-      setError('Please fill in required fields (Company Name and Committed Capital)');
+    if (!investment.companyName || !investment.committedCapital || !investment.localEquivalent) {
+      setError('Please fill in required fields (Company Name, Committed Capital, and Local Equivalent)');
       return;
     }
 
@@ -135,7 +143,7 @@ export default function SimpleMVP() {
           investment: {
             ...investment,
             committedCapitalLcl: parseFloat(investment.committedCapital),
-            currentFairValueEur: parseFloat(investment.committedCapital),
+            currentFairValueEur: parseFloat(investment.localEquivalent),
             icApprovalDate: new Date().toISOString(),
             investmentExecutionDate: new Date().toISOString(),
             icReference: `IC-${Date.now()}`,
@@ -150,7 +158,8 @@ export default function SimpleMVP() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create investment');
+        const errorMessage = errorData.error?.message || errorData.error || errorData.message || JSON.stringify(errorData);
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -162,7 +171,8 @@ export default function SimpleMVP() {
         sector: '',
         stage: 'SEED',
         committedCapital: '',
-        dealOwner: '',
+        currency: 'EUR',
+        localEquivalent: '',
       });
       setDocuments([]);
       setAnalysis(null);
@@ -220,6 +230,93 @@ export default function SimpleMVP() {
     }
   };
 
+  const createAndAnalyze = async () => {
+    if (!investment.companyName || !investment.committedCapital || !investment.localEquivalent) {
+      setError('Please fill in required fields (Company Name, Committed Capital, and Local Equivalent)');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${BACKEND_URL}/api/investments/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          investment: {
+            ...investment,
+            committedCapitalLcl: parseFloat(investment.committedCapital),
+            currentFairValueEur: parseFloat(investment.localEquivalent),
+            icApprovalDate: new Date().toISOString(),
+            investmentExecutionDate: new Date().toISOString(),
+            icReference: `IC-${Date.now()}`,
+          },
+          files: documents.map((doc) => ({
+            fileName: doc.fileName,
+            fileSize: doc.fileSize,
+            filePath: `local://${doc.fileName}`,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error?.message || errorData.error || errorData.message || JSON.stringify(errorData);
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      setSuccess('Investment created successfully! ID: ' + result.id);
+
+      if (documents.length > 0) {
+        setAnalyzing(true);
+        const analyzeResponse = await fetch(`${BACKEND_URL}/api/review/analyze-direct`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            investmentId: result.id,
+            documents: documents.map((doc) => ({
+              fileName: doc.fileName,
+              type: 'PITCH_DECK',
+              content: doc.content,
+            })),
+            investment: {
+              companyName: investment.companyName,
+              sector: investment.sector,
+              stage: investment.stage,
+              committedCapitalLcl: parseFloat(investment.committedCapital),
+            },
+          }),
+        });
+
+        if (analyzeResponse.ok) {
+          const analyzeResult = await analyzeResponse.json();
+          setAnalysis(analyzeResult.analysis);
+          setShowReviewPopup(true);
+        }
+        setAnalyzing(false);
+      }
+
+      setInvestment({
+        companyName: '',
+        sector: '',
+        stage: 'SEED',
+        committedCapital: '',
+        currency: 'EUR',
+        localEquivalent: '',
+      });
+      setDocuments([]);
+    } catch (err: any) {
+      setError('Failed to create investment: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const exportToJSON = () => {
     if (!analysis) return;
 
@@ -246,12 +343,14 @@ export default function SimpleMVP() {
       sector: '',
       stage: 'SEED',
       committedCapital: '',
-      dealOwner: '',
+      currency: 'EUR',
+      localEquivalent: '',
     });
     setDocuments([]);
     setAnalysis(null);
     setError('');
     setSuccess('');
+    setShowReviewPopup(false);
   };
 
   return (
@@ -259,8 +358,8 @@ export default function SimpleMVP() {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Simple Investment MVP v2</h1>
-            <p className="text-gray-600">Create investments and analyze documents with ChatGPT (no AWS required)</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Successful Deal Closed</h1>
+            <p className="text-gray-600">Create and record investments profile with one-click</p>
           </div>
 
           {error && (
@@ -289,7 +388,7 @@ export default function SimpleMVP() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Name <span className="text-red-500">*</span>
+                  Company Name (legal entity) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -305,14 +404,34 @@ export default function SimpleMVP() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Sector
                 </label>
-                <input
-                  type="text"
+                <select
                   name="sector"
                   value={investment.sector}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., SaaS, Fintech"
-                />
+                >
+                  <option value="">Select a sector</option>
+                  <option value="AI and ML">AI and ML</option>
+                  <option value="Fintech">Fintech</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="SaaS">SaaS</option>
+                  <option value="Consumer Tech">Consumer Tech</option>
+                  <option value="E-commerce">E-commerce</option>
+                  <option value="Cybersecurity">Cybersecurity</option>
+                  <option value="Cloud">Cloud</option>
+                  <option value="Data Analytics">Data Analytics</option>
+                  <option value="CleanTech">CleanTech</option>
+                  <option value="EdTech">EdTech</option>
+                  <option value="Logistics">Logistics</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Gaming">Gaming</option>
+                  <option value="Robotics">Robotics</option>
+                  <option value="Blockchain">Blockchain</option>
+                  <option value="Telecom">Telecom</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="AgriTech">AgriTech</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div>
@@ -335,7 +454,7 @@ export default function SimpleMVP() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Committed Capital (€) <span className="text-red-500">*</span>
+                  Committed Capital (Local) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -347,17 +466,40 @@ export default function SimpleMVP() {
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Deal Owner
+                  Currency
                 </label>
-                <input
-                  type="text"
-                  name="dealOwner"
-                  value={investment.dealOwner}
+                <select
+                  name="currency"
+                  value={investment.currency}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., John Doe"
+                >
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CHF">CHF</option>
+                  <option value="SEK">SEK</option>
+                  <option value="NOK">NOK</option>
+                  <option value="DKK">DKK</option>
+                  <option value="PLN">PLN</option>
+                  <option value="CZK">CZK</option>
+                  <option value="HUF">HUF</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Local Equivalent (EUR) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="localEquivalent"
+                  value={investment.localEquivalent}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="e.g., 500000"
                 />
               </div>
             </div>
@@ -464,19 +606,11 @@ export default function SimpleMVP() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={createInvestment}
-                disabled={uploading || !investment.companyName || !investment.committedCapital}
+                onClick={createAndAnalyze}
+                disabled={uploading || !investment.companyName || !investment.committedCapital || !investment.localEquivalent}
                 className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {uploading ? 'Creating...' : 'Create Investment'}
-              </button>
-
-              <button
-                onClick={analyzeWithChatGPT}
-                disabled={analyzing || documents.length === 0}
-                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {analyzing ? 'Analyzing...' : 'Analyze with ChatGPT'}
+                {uploading ? 'Creating & Analyzing...' : 'Create Investment & Analyze Documents'}
               </button>
 
               <button
@@ -596,8 +730,94 @@ export default function SimpleMVP() {
               </div>
             </div>
           )}
+
+          {showReviewPopup && analysis && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900">Investment Review</h2>
+                    <button
+                      onClick={() => setShowReviewPopup(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {analysis.dataQuality && (
+                    <div className="bg-blue-50 p-4 rounded-md">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Data Quality Assessment</h3>
+                      <div className="grid grid-cols-3 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-gray-600">Overall Score</p>
+                          <p className="text-2xl font-bold text-blue-600">{analysis.dataQuality.score}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Completeness</p>
+                          <p className="text-2xl font-bold text-green-600">{analysis.dataQuality.completeness}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Confidence</p>
+                          <p className="text-2xl font-bold text-purple-600">{analysis.dataQuality.confidence}%</p>
+                        </div>
+                      </div>
+                      {analysis.dataQuality.warnings.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-2">Warnings:</p>
+                          <ul className="space-y-1">
+                            {analysis.dataQuality.warnings.map((warning, idx) => (
+                              <li key={idx} className="text-sm text-yellow-700 flex items-start">
+                                <span className="mr-2">⚠️</span>
+                                {warning}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {analysis.extractedData && (
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Extracted Data</h3>
+                      <pre className="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">
+                        {JSON.stringify(analysis.extractedData, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setShowReviewPopup(false)}
+                      className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                    >
+                      Confirm & Save
+                    </button>
+                    <button
+                      onClick={() => setShowReviewPopup(false)}
+                      className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Edit Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+

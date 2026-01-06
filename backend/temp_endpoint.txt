@@ -1,0 +1,103 @@
+﻿app.get('/api/investments/:id', asyncHandler(async (req, res) => {
+  const investment = await prisma.investment.findUnique({
+    where: { id: req.params.id },
+    include: {
+      founders: true,
+      cashflows: true,
+      valuations: true,
+      flags: true,
+      documents: true,
+      notes: true,
+      forecasts: {
+        include: { metrics: true },
+      },
+      founderUpdates: true,
+      actionsRequired: true,
+      auditLogs: true,
+    },
+  });
+  if (!investment) {
+    const error = new Error('Investment not found') as any;
+    error.statusCode = 404;
+    error.isOperational = true;
+    throw error;
+  }
+
+  // Transform to match frontend expectations
+  const grossMoic = investment.committedCapitalLcl > 0
+    ? (investment.currentFairValueEur / investment.committedCapitalLcl).toFixed(2)
+    : '0.00';
+
+  const activeFlags = investment.flags.filter(f => f.status !== 'RESOLVED').length;
+  let status = 'GREEN';
+  if (activeFlags >= 3) status = 'RED';
+  else if (activeFlags >= 1) status = 'AMBER';
+
+  const transformed = {
+    id: investment.id,
+    companyName: investment.companyName,
+    sector: investment.sector,
+    stage: investment.stage,
+    geography: investment.geography,
+    investmentType: investment.investmentType,
+    committedCapitalLcl: investment.committedCapitalLcl,
+    deployedCapitalLcl: investment.deployedCapitalLcl,
+    ownershipPercent: investment.ownershipPercent,
+    investmentDate: investment.investmentExecutionDate.toISOString().split('T')[0],
+    currentFairValueEur: investment.currentFairValueEur,
+    grossMoic: grossMoic,
+    grossIrr: '0.00',
+    roundSizeEur: investment.roundSizeEur,
+    enterpriseValueEur: investment.enterpriseValueEur,
+    status: status,
+    activeFlags: activeFlags,
+    founders: investment.founders.map(f => ({
+      name: f.name,
+      email: f.email
+    })),
+    raisedFollowOnCapital: investment.raisedFollowOnCapital,
+    clearProductMarketFit: investment.clearProductMarketFit,
+    meaningfulRevenue: investment.meaningfulRevenue,
+    founderUpdates: investment.founderUpdates.map(u => ({
+      id: u.id,
+      quarterIndex: u.quarterIndex,
+      dueDate: u.dueDate.toISOString().split('T')[0],
+      submittedAt: u.submittedAt.toISOString().split('T')[0],
+      status: u.status,
+      actualRevenue: u.actualRevenue,
+      actualBurn: u.actualBurn,
+      actualRunwayMonths: u.actualRunwayMonths,
+      actualTraction: u.actualTraction,
+      narrativeGood: u.narrativeGood,
+      narrativeBad: u.narrativeBad,
+      narrativeHelp: u.narrativeHelp
+    })),
+    forecasts: investment.forecasts.map(f => ({
+      id: f.id,
+      version: f.version,
+      startQuarter: f.startQuarter.toISOString().split('T')[0],
+      horizonQuarters: f.horizonQuarters,
+      rationale: f.rationale,
+      metrics: f.metrics.map(m => ({
+        id: m.id,
+        metric: m.metric,
+        quarterIndex: m.quarterIndex,
+        value: m.value
+      }))
+    })),
+    flags: investment.flags.map(f => ({
+      id: f.id,
+      type: f.type,
+      metric: f.metric,
+      threshold: f.threshold,
+      actualValue: f.actualValue,
+      forecastValue: f.forecastValue,
+      deltaPct: f.deltaPct,
+      status: f.status,
+      createdAt: f.createdAt.toISOString().split('T')[0]
+    }))
+  };
+
+  res.json(transformed);
+}));
+
