@@ -46,7 +46,7 @@ type ViewPreset = 'ALL' | 'IC' | 'FINANCE' | 'RISK';
 
 const VIEW_PRESETS: Record<ViewPreset, ColumnKey[]> = {
   ALL: [
-    'companyName', 'sector', 'stage', 'geography', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'geography', 'investmentType',
     'committedCapitalEur', 'deployedCapitalEur', 'ownershipPercent',
     'investmentDate', 'currentFairValueEur', 'grossMoic', 'grossIrr',
     'roundSizeEur', 'enterpriseValueEur', 'runway', 'status', 'activeFlags',
@@ -54,20 +54,20 @@ const VIEW_PRESETS: Record<ViewPreset, ColumnKey[]> = {
     'clearProductMarketFit', 'meaningfulRevenue'
   ],
   IC: [
-    'companyName', 'sector', 'stage', 'geography', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'geography', 'investmentType',
     'committedCapitalEur', 'ownershipPercent', 'investmentDate',
     'currentFairValueEur', 'grossMoic', 'runway', 'status', 'activeFlags',
     'founderNames', 'raisedFollowOnCapital', 'clearProductMarketFit',
     'meaningfulRevenue'
   ],
   FINANCE: [
-    'companyName', 'sector', 'stage', 'investmentType',
+    'delete', 'companyName', 'sector', 'stage', 'investmentType',
     'committedCapitalEur', 'deployedCapitalEur', 'ownershipPercent',
     'investmentDate', 'currentFairValueEur', 'grossMoic', 'grossIrr',
     'roundSizeEur', 'enterpriseValueEur', 'runway', 'status'
   ],
   RISK: [
-    'companyName', 'sector', 'stage', 'runway', 'status', 'activeFlags',
+    'delete', 'companyName', 'sector', 'stage', 'runway', 'status', 'activeFlags',
     'grossMoic', 'grossIrr', 'investmentDate', 'founderNames'
   ]
 };
