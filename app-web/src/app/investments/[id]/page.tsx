@@ -244,6 +244,17 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     return 'bg-gray-100 text-gray-800';
   };
 
+  const getYearLabel = (yearOffset: number): string => {
+    const investmentDate = new Date(investment.investmentExecutionDate);
+    const targetDate = new Date(investmentDate);
+    targetDate.setFullYear(investmentDate.getFullYear() + yearOffset);
+
+    return targetDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short'
+    });
+  };
+
   const prepareChartData = (forecast: Array<{ quarterIndex: number; value: number }>, actual: Array<{ quarter: number; value: number }>) => {
     const data = [];
     // Always show Y1-Y5 (5 years)
@@ -252,9 +263,23 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
       const actualPoint = actual.find(a => a.quarter === period);
 
       data.push({
-        quarter: `Y${period}`,
+        quarter: getYearLabel(period),
         forecast: forecastPoint?.value || null,
         actual: actualPoint?.value || null
+      });
+    }
+    return data;
+  };
+
+  const prepareForecastOnlyData = (forecast: Array<{ quarterIndex: number; value: number }>) => {
+    const data = [];
+    // Always show Y1-Y5 (5 years)
+    for (let period = 1; period <= 5; period++) {
+      const forecastPoint = forecast.find(f => f.quarterIndex === period);
+
+      data.push({
+        quarter: getYearLabel(period),
+        forecast: forecastPoint?.value || null
       });
     }
     return data;
@@ -408,7 +433,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">COGS (Cost of Goods Sold)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={forecast.cogs.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+              <LineChart data={prepareForecastOnlyData(forecast.cogs)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
                 <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
@@ -422,7 +447,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">OPEX (Operating Expenses)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={forecast.opex.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+              <LineChart data={prepareForecastOnlyData(forecast.opex)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
                 <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
@@ -436,7 +461,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">CAPEX (Capital Expenditures)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={forecast.capex.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+              <LineChart data={prepareForecastOnlyData(forecast.capex)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
                 <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
@@ -450,7 +475,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">EBITDA (Profitability Path)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={forecast.ebitda.map(m => ({ quarter: `Y${m.quarterIndex}`, forecast: m.value }))}>
+              <LineChart data={prepareForecastOnlyData(forecast.ebitda)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="quarter" />
                 <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
