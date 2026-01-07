@@ -248,7 +248,7 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
     const maxPeriod = Math.max(
       ...forecast.map(f => f.quarterIndex),
       ...actual.map(a => a.quarter),
-      0
+      20 // Default to 20 quarters (5 years) if no data
     );
 
     const data = [];
@@ -608,28 +608,14 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Cash Balance</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={(() => {
-                const cashData = [];
-                const startingCash = investment.cashAtSnapshot || 1200000; // Default €1.2M
-                const monthlyBurn = investment.monthlyBurn || 66667; // €800k/year = €66.7k/mo
-
-                // Generate 18 months of cash depletion
-                for (let month = 0; month <= 18; month++) {
-                  const remainingCash = Math.max(0, startingCash - (monthlyBurn * month));
-                  cashData.push({
-                    quarter: `M${month}`,
-                    balance: remainingCash
-                  });
-                }
-
-                return cashData;
-              })()}>
+              <LineChart data={prepareChartData(forecast.burn, actuals.burn)}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="quarter" label={{ value: 'Months', position: 'insideBottom', offset: -5 }} />
+                <XAxis dataKey="quarter" />
                 <YAxis tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`} />
                 <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
                 <Legend />
-                <Line type="monotone" dataKey="balance" stroke="#06b6d4" strokeWidth={2} name="Cash Balance" />
+                <Line type="monotone" dataKey="forecast" stroke="#06b6d4" strokeWidth={2} name="Forecast" dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={0} name="Actual" dot={{ r: 6, fill: '#10b981' }} connectNulls={false} />
                 <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="3 3" label="Zero Cash" />
               </LineChart>
             </ResponsiveContainer>
@@ -638,26 +624,13 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Traction (Customer Count)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={(() => {
-                // Generate dummy customer growth: 10 → 500 over 18 months
-                const tractionData = [];
-                for (let month = 0; month <= 18; month++) {
-                  // Exponential growth curve
-                  const customers = Math.floor(10 * Math.pow(1.25, month));
-                  tractionData.push({
-                    quarter: `M${month}`,
-                    forecast: customers,
-                    actual: month <= 6 ? customers + Math.floor(Math.random() * 10 - 5) : null // Actuals for first 6 months
-                  });
-                }
-                return tractionData;
-              })()}>
+              <LineChart data={prepareChartData(forecast.traction, actuals.traction)}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="quarter" label={{ value: 'Months', position: 'insideBottom', offset: -5 }} />
+                <XAxis dataKey="quarter" />
                 <YAxis label={{ value: 'Customers', angle: -90, position: 'insideLeft' }} />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast Growth" dot={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} name="Forecast" dot={false} />
                 <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={0} name="Actual" dot={{ r: 6, fill: '#10b981' }} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>

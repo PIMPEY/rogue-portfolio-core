@@ -1,22 +1,109 @@
-import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage, FlagType, MetricType, CashflowType } from '@prisma/client';
-import { evaluateFlags } from '../src/lib/flagEngine';
+import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage, MetricType } from '@prisma/client';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
 
-const sectors = ['SaaS', 'Fintech', 'Healthcare', 'E-commerce', 'AI/ML', 'ClimateTech', 'EdTech', 'Cybersecurity'];
-const stages = [InvestmentStage.PRE_SEED, InvestmentStage.SEED, InvestmentStage.SERIES_A, InvestmentStage.SERIES_B];
-const investmentTypes = [InvestmentType.SAFE, InvestmentType.CLN, InvestmentType.EQUITY];
-const geographies = ['US', 'GB', 'DE', 'FR', 'ES', 'IT', 'NL', 'SE'];
-
-const companyNames = [
-  'CloudSync AI', 'PayFlow Pro', 'MediTrack', 'ShopGenius', 'NeuralNet Labs',
-  'GreenEnergy Co', 'LearnFast', 'SecureShield', 'DataPulse', 'FinTech Hub',
-  'HealthFirst', 'RetailMax', 'AutoML Systems', 'CleanWater Tech', 'EduSpark',
-  'CyberGuard', 'CloudScale', 'PayStream', 'MediConnect', 'SmartRetail'
+const companies = [
+  {
+    name: 'PayFlow Solutions',
+    investmentMonth: 0, // Jan 2024
+    performance: 'strong', // Strong revenue growth, positive trajectory
+  },
+  {
+    name: 'CreditEdge Analytics',
+    investmentMonth: 1, // Feb 2024
+    performance: 'moderate', // Steady growth
+  },
+  {
+    name: 'WealthVista',
+    investmentMonth: 2, // Mar 2024
+    performance: 'struggling', // Higher burn, slower revenue
+  },
+  {
+    name: 'InsureTech Pro',
+    investmentMonth: 3, // Apr 2024
+    performance: 'strong',
+  },
+  {
+    name: 'BlockChain Finance',
+    investmentMonth: 4, // May 2024
+    performance: 'moderate',
+  },
+  {
+    name: 'NeoBank Digital',
+    investmentMonth: 5, // Jun 2024
+    performance: 'strong',
+  },
+  {
+    name: 'LendingBridge',
+    investmentMonth: 6, // Jul 2024
+    performance: 'struggling',
+  },
+  {
+    name: 'FraudGuard AI',
+    investmentMonth: 7, // Aug 2024
+    performance: 'strong',
+  },
+  {
+    name: 'TradeTech Exchange',
+    investmentMonth: 8, // Sep 2024
+    performance: 'moderate',
+  },
+  {
+    name: 'ReguComply Suite',
+    investmentMonth: 9, // Oct 2024
+    performance: 'moderate',
+  },
 ];
+
+function generateForecastMetrics(performance: string) {
+  const metrics: Array<{ metric: MetricType; quarterIndex: number; value: number }> = [];
+
+  // Base values
+  let baseRevenue = 50000;
+  let baseCOGS = 15000;
+  let baseOPEX = 80000;
+  let baseCAPEX = 10000;
+  let baseCashBalance = 1500000;
+  let baseCustomers = 50;
+
+  // Growth rates based on performance
+  const growthRates = {
+    strong: { revenue: 1.25, cogs: 1.15, opex: 1.08, capex: 1.05, customers: 1.30 },
+    moderate: { revenue: 1.15, cogs: 1.12, opex: 1.10, capex: 1.05, customers: 1.20 },
+    struggling: { revenue: 1.08, cogs: 1.10, opex: 1.12, capex: 1.03, customers: 1.10 },
+  };
+
+  const rates = growthRates[performance as keyof typeof growthRates];
+
+  // Generate 20 quarters (5 years)
+  for (let q = 1; q <= 20; q++) {
+    const revenue = Math.round(baseRevenue * Math.pow(rates.revenue, q - 1));
+    const cogs = Math.round(baseCOGS * Math.pow(rates.cogs, q - 1));
+    const opex = Math.round(baseOPEX * Math.pow(rates.opex, q - 1));
+    const capex = Math.round(baseCAPEX * Math.pow(rates.capex, q - 1));
+    const ebitda = revenue - cogs - opex - capex;
+    const customers = Math.round(baseCustomers * Math.pow(rates.customers, q - 1));
+
+    // Cash balance depletes based on EBITDA
+    baseCashBalance = baseCashBalance + ebitda;
+    const cashBalance = Math.max(0, baseCashBalance);
+
+    metrics.push(
+      { metric: 'REVENUE' as MetricType, quarterIndex: q, value: revenue },
+      { metric: 'COGS' as MetricType, quarterIndex: q, value: cogs },
+      { metric: 'OPEX' as MetricType, quarterIndex: q, value: opex },
+      { metric: 'CAPEX' as MetricType, quarterIndex: q, value: capex },
+      { metric: 'EBITDA' as MetricType, quarterIndex: q, value: ebitda },
+      { metric: 'BURN' as MetricType, quarterIndex: q, value: cashBalance },
+      { metric: 'TRACTION' as MetricType, quarterIndex: q, value: customers }
+    );
+  }
+
+  return metrics;
+}
 
 async function main() {
   const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -30,171 +117,85 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('Starting seed...');
+  console.log('🌱 Starting seed...');
   console.log('Environment:', NODE_ENV);
 
-  for (let i = 0; i < 20; i++) {
-    const companyName = companyNames[i];
-    const sector = sectors[i % sectors.length];
-    const stage = stages[i % stages.length];
-    const investmentType = investmentTypes[i % investmentTypes.length];
-    const geography = geographies[i % geographies.length];
-    const committedCapitalLcl = 500000 + Math.random() * 2000000;
-    const investmentExecutionDate = new Date(2024, Math.floor(Math.random() * 12), 1);
-    const icApprovalDate = new Date(investmentExecutionDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const icReference = String(i + 1).padStart(5, '0');
+  // Clear existing data
+  console.log('Clearing existing data...');
+  await prisma.forecastMetric.deleteMany();
+  await prisma.forecast.deleteMany();
+  await prisma.founder.deleteMany();
+  await prisma.flag.deleteMany();
+  await prisma.founderUpdate.deleteMany();
+  await prisma.investment.deleteMany();
+
+  // Create 10 companies
+  for (const company of companies) {
+    const investmentDate = new Date(2024, company.investmentMonth, 15); // 15th of each month
+    const dealOwners = ['Sarah Chen', 'Marcus Rodriguez', 'Emily Thompson'];
+    const dealOwner = dealOwners[Math.floor(Math.random() * dealOwners.length)];
+
+    console.log(`Creating ${company.name}...`);
 
     const investment = await prisma.investment.create({
       data: {
-        icReference,
-        icApprovalDate,
-        investmentExecutionDate,
-        dealOwner: 'PJI',
-        companyName,
-        sector,
-        geography,
-        stage,
-        investmentType,
-        committedCapitalLcl,
-        deployedCapitalLcl: committedCapitalLcl,
-        ownershipPercent: investmentType === InvestmentType.EQUITY ? 5 + Math.random() * 15 : null,
-        localCurrency: 'USD',
-        investmentFxRate: 1.08,
-        investmentFxSource: 'ECB',
-        valuationFxRate: 1.08,
-        valuationFxSource: 'ECB',
-        roundSizeEur: committedCapitalLcl * 1.08 * (2 + Math.random()),
-        currentFairValueEur: committedCapitalLcl * 1.08,
-        status: InvestmentStatus.ACTIVE,
+        icReference: `IC-2024-${String(company.investmentMonth + 1).padStart(3, '0')}`,
+        icApprovalDate: new Date(investmentDate.getTime() - 14 * 24 * 60 * 60 * 1000), // 2 weeks before
+        investmentExecutionDate: investmentDate,
+        companyName: company.name,
+        sector: 'FinTech',
+        stage: 'SERIES_A' as InvestmentStage,
+        geography: 'Europe',
+        investmentType: 'EQUITY' as InvestmentType,
+        committedCapitalLcl: 2000000,
+        deployedCapitalLcl: 2000000,
+        ownershipPercent: 15.0,
+        coInvestors: null,
+        hasBoardSeat: true,
+        hasProRataRights: true,
+        hasAntiDilutionProtection: true,
+        roundSizeEur: 5000000,
+        enterpriseValueEur: 20000000,
+        currentFairValueEur: 2000000,
+        snapshotDate: investmentDate,
+        cashAtSnapshot: 1500000,
+        monthlyBurn: company.performance === 'struggling' ? 120000 : company.performance === 'moderate' ? 80000 : 50000,
+        calculatedRunwayMonths: company.performance === 'struggling' ? 12 : company.performance === 'moderate' ? 18 : 24,
+        customersAtSnapshot: 50,
+        arrAtSnapshot: 600000,
+        liquidityExpectation: 'Series B',
+        expectedLiquidityDate: new Date(2026, 6, 1), // Mid 2026
+        expectedLiquidityMultiple: 3.0,
+        raisedFollowOnCapital: false,
+        clearProductMarketFit: company.performance !== 'struggling',
+        meaningfulRevenue: true,
+        status: 'ACTIVE' as InvestmentStatus,
         founders: {
-          create: {
-            name: `Founder ${i + 1}`,
-            email: `founder${i + 1}@${companyName.toLowerCase().replace(/\s/g, '')}.com`
-          }
+          create: [
+            {
+              name: `${company.name.split(' ')[0]} Founder`,
+              email: `founder@${company.name.toLowerCase().replace(/\s+/g, '')}.com`,
+            },
+          ],
         },
-        cashflows: {
+        forecasts: {
           create: {
-            type: CashflowType.INITIAL_INVESTMENT,
-            amountLcl: committedCapitalLcl,
-            amountEur: committedCapitalLcl * 1.08,
-            date: investmentExecutionDate,
-            description: 'Initial investment'
-          }
-        }
-      }
+            version: 1,
+            startQuarter: investmentDate,
+            horizonQuarters: 20,
+            rationale: 'Series A financial forecast - 5 year projection',
+            metrics: {
+              create: generateForecastMetrics(company.performance),
+            },
+          },
+        },
+      },
     });
 
-    console.log(`Created investment: ${companyName}`);
-
-    const forecast = await prisma.forecast.create({
-      data: {
-        investmentId: investment.id,
-        version: 1,
-        startQuarter: investmentExecutionDate,
-        horizonQuarters: 8
-      }
-    });
-
-    const baseRevenue = 10000 + Math.random() * 50000;
-    const baseBurn = 50000 + Math.random() * 100000;
-    const baseTraction = 100 + Math.random() * 1000;
-
-    for (let q = 1; q <= 8; q++) {
-      const revenueGrowth = 1.2 + Math.random() * 0.3;
-      const burnGrowth = 1.05 + Math.random() * 0.1;
-      const tractionGrowth = 1.3 + Math.random() * 0.4;
-
-      await prisma.forecastMetric.createMany({
-        data: [
-          {
-            forecastId: forecast.id,
-            metric: MetricType.REVENUE,
-            quarterIndex: q,
-            value: baseRevenue * Math.pow(revenueGrowth, q - 1)
-          },
-          {
-            forecastId: forecast.id,
-            metric: MetricType.BURN,
-            quarterIndex: q,
-            value: baseBurn * Math.pow(burnGrowth, q - 1)
-          },
-          {
-            forecastId: forecast.id,
-            metric: MetricType.TRACTION,
-            quarterIndex: q,
-            value: baseTraction * Math.pow(tractionGrowth, q - 1)
-          }
-        ]
-      });
-    }
-
-    const numUpdates = Math.floor(Math.random() * 4) + 1;
-
-    for (let q = 1; q <= numUpdates; q++) {
-      const forecastMetrics = await prisma.forecastMetric.findMany({
-        where: { forecastId: forecast.id, quarterIndex: q }
-      });
-
-      const forecastRevenue = forecastMetrics.find(m => m.metric === MetricType.REVENUE)?.value || 0;
-      const forecastBurn = forecastMetrics.find(m => m.metric === MetricType.BURN)?.value || 0;
-      const forecastTraction = forecastMetrics.find(m => m.metric === MetricType.TRACTION)?.value || 0;
-
-      const variance = 0.6 + Math.random() * 0.8;
-      const actualRevenue = forecastRevenue * variance;
-      const actualBurn = forecastBurn * (0.9 + Math.random() * 0.5);
-      const actualTraction = forecastTraction * variance;
-      const actualRunwayMonths = 3 + Math.random() * 12;
-
-      const update = await prisma.founderUpdate.create({
-        data: {
-          investmentId: investment.id,
-          quarterIndex: q,
-          dueDate: new Date(investmentExecutionDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
-          submittedAt: new Date(investmentExecutionDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
-          status: 'SUBMITTED',
-          actualRevenue,
-          actualBurn,
-          actualRunwayMonths,
-          actualTraction,
-          narrativeGood: 'Strong customer acquisition',
-          narrativeBad: 'Higher than expected burn',
-          narrativeHelp: 'Need help with hiring'
-        }
-      });
-
-      const flagResult = evaluateFlags(
-        { revenue: forecastRevenue, burn: forecastBurn, traction: forecastTraction },
-        { revenue: actualRevenue, burn: actualBurn, traction: actualTraction, runwayMonths: actualRunwayMonths }
-      );
-
-      for (const flag of flagResult.flags) {
-        const metricMap: Record<string, MetricType> = {
-          'revenue': MetricType.REVENUE,
-          'burn': MetricType.BURN,
-          'traction': MetricType.TRACTION,
-          'headcount': MetricType.HEADCOUNT
-        };
-
-        await prisma.flag.create({
-          data: {
-            investmentId: investment.id,
-            founderUpdateId: update.id,
-            type: flag.type as FlagType,
-            metric: flag.metric ? metricMap[flag.metric] : null,
-            threshold: flag.threshold,
-            actualValue: flag.actualValue,
-            forecastValue: flag.forecastValue,
-            deltaPct: flag.deltaPct,
-            status: flagResult.status === 'RED' ? 'NEW' : flagResult.status === 'AMBER' ? 'MONITORING' : 'RESOLVED'
-          }
-        });
-      }
-    }
-
-    console.log(`Created forecast and ${numUpdates} updates for ${companyName}`);
+    console.log(`✓ Created ${company.name} (${investment.id})`);
   }
 
-  console.log('Seed completed!');
+  console.log('✅ Seed completed!');
 }
 
 main()
