@@ -13,6 +13,8 @@ interface Investment {
   deployedCapitalEur: number;
   currentFairValueEur: number;
   runway: number | null;
+  grossMoic: string;
+  investmentDate: string;
 }
 
 interface PortfolioChartsProps {
@@ -122,6 +124,62 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
 
   const runwayData = runwayRanges.filter(r => r.count > 0).map(r => ({ name: r.name, value: r.count }));
 
+  // MOIC distribution
+  const moicRanges = [
+    { name: '<1x', min: 0, max: 1, count: 0, total: 0 },
+    { name: '1-2x', min: 1, max: 2, count: 0, total: 0 },
+    { name: '2-3x', min: 2, max: 3, count: 0, total: 0 },
+    { name: '3-5x', min: 3, max: 5, count: 0, total: 0 },
+    { name: '5x+', min: 5, max: Infinity, count: 0, total: 0 },
+  ];
+
+  investments.forEach(inv => {
+    const moic = parseFloat(inv.grossMoic || '1.0');
+    const range = moicRanges.find(r => moic >= r.min && moic < r.max);
+    if (range) {
+      range.count++;
+      range.total += inv.deployedCapitalEur;
+    }
+  });
+
+  const moicData = moicRanges.filter(r => r.count > 0).map(r => ({
+    name: r.name,
+    count: r.count,
+    capital: r.total
+  }));
+
+  // Concentration risk - top 5 investments by capital
+  const concentrationData = investments
+    .sort((a, b) => b.deployedCapitalEur - a.deployedCapitalEur)
+    .slice(0, 5)
+    .map(inv => ({
+      name: inv.companyName.length > 15 ? inv.companyName.substring(0, 15) + '...' : inv.companyName,
+      value: inv.deployedCapitalEur,
+      percentage: ((inv.deployedCapitalEur / totalDeployed) * 100).toFixed(1)
+    }));
+
+  // Vintage year analysis
+  const vintageData = Object.entries(
+    investments.reduce((acc, inv) => {
+      const year = new Date(inv.investmentDate).getFullYear();
+      if (!acc[year]) {
+        acc[year] = { count: 0, deployed: 0, currentValue: 0 };
+      }
+      acc[year].count++;
+      acc[year].deployed += inv.deployedCapitalEur;
+      acc[year].currentValue += inv.currentFairValueEur;
+      return acc;
+    }, {} as Record<number, { count: number; deployed: number; currentValue: number }>)
+  ).map(([year, data]) => ({
+    year: year.toString(),
+    count: data.count,
+    deployed: data.deployed,
+    moic: (data.currentValue / data.deployed).toFixed(2)
+  })).sort((a, b) => parseInt(a.year) - parseInt(b.year));
+
+  // Capital deployment efficiency
+  const deploymentEfficiency = ((totalDeployed / totalCommitted) * 100).toFixed(1);
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
@@ -229,6 +287,54 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
               <Bar dataKey="value" fill="#8b5cf6" name="Companies" />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Advanced Analytics - Second Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* MOIC Distribution */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">MOIC Distribution</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={moicData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip formatter={(value: number | undefined) => value !== undefined ? `${value} companies` : 'N/A'} />
+              <Bar dataKey="count" fill="#10b981" name="Companies" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Concentration Risk */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Top 5 Investments (Capital)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={concentrationData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" tickFormatter={(value) => `€${(value / 1000000).toFixed(1)}M`} />
+              <YAxis type="category" dataKey="name" width={120} />
+              <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+              <Bar dataKey="value" fill="#f59e0b" name="Deployed Capital" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Vintage Year Analysis */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Vintage Year Performance</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={vintageData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#3b82f6" name="Investments" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="mt-4 text-sm text-gray-600">
+            <p>Capital Deployment: <span className="font-semibold">{deploymentEfficiency}%</span></p>
+          </div>
         </div>
       </div>
 
