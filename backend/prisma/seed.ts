@@ -11,60 +11,160 @@ const companies = [
     year: 2024,
     month: 0, // Jan 2024
     performance: 'strong',
+    sector: 'FinTech',
+    stage: 'SERIES_A' as InvestmentStage,
+    geography: 'UK',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 2000000,
+    deployedCapital: 2000000,
+    ownership: 15.0,
+    roundSize: 5000000,
+    enterpriseValue: 20000000,
+    initialCash: 1500000,
   },
   {
-    name: 'CreditEdge Analytics',
+    name: 'HealthTech Diagnostics',
     year: 2024,
-    month: 2, // Mar 2024
+    month: 1, // Feb 2024
+    performance: 'strong',
+    sector: 'HealthTech',
+    stage: 'SEED' as InvestmentStage,
+    geography: 'Germany',
+    investmentType: 'SAFE' as InvestmentType,
+    committedCapital: 500000,
+    deployedCapital: 500000,
+    ownership: 8.0,
+    roundSize: 2000000,
+    enterpriseValue: 6000000,
+    initialCash: 800000,
+  },
+  {
+    name: 'GreenEnergy AI',
+    year: 2024,
+    month: 3, // Apr 2024
     performance: 'moderate',
+    sector: 'CleanTech',
+    stage: 'SERIES_A' as InvestmentStage,
+    geography: 'Netherlands',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 3000000,
+    deployedCapital: 2500000,
+    ownership: 12.0,
+    roundSize: 8000000,
+    enterpriseValue: 35000000,
+    initialCash: 2000000,
   },
   {
-    name: 'WealthVista',
+    name: 'EduTech Platform',
     year: 2024,
-    month: 5, // Jun 2024
+    month: 4, // May 2024
     performance: 'struggling',
+    sector: 'EdTech',
+    stage: 'SERIES_A' as InvestmentStage,
+    geography: 'Spain',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 1500000,
+    deployedCapital: 1500000,
+    ownership: 10.0,
+    roundSize: 4000000,
+    enterpriseValue: 15000000,
+    initialCash: 1200000,
   },
   {
-    name: 'InsureTech Pro',
+    name: 'LogiChain Solutions',
     year: 2024,
-    month: 7, // Aug 2024
-    performance: 'strong',
-  },
-  {
-    name: 'BlockChain Finance',
-    year: 2024,
-    month: 9, // Oct 2024
+    month: 6, // Jul 2024
     performance: 'moderate',
+    sector: 'Logistics',
+    stage: 'SERIES_B' as InvestmentStage,
+    geography: 'France',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 5000000,
+    deployedCapital: 5000000,
+    ownership: 8.5,
+    roundSize: 15000000,
+    enterpriseValue: 80000000,
+    initialCash: 5000000,
   },
   {
-    name: 'NeoBank Digital',
+    name: 'CyberShield Security',
     year: 2024,
-    month: 11, // Dec 2024
+    month: 8, // Sep 2024
     performance: 'strong',
+    sector: 'CyberSecurity',
+    stage: 'SERIES_A' as InvestmentStage,
+    geography: 'UK',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 2500000,
+    deployedCapital: 2500000,
+    ownership: 14.0,
+    roundSize: 6000000,
+    enterpriseValue: 25000000,
+    initialCash: 2200000,
   },
   {
-    name: 'LendingBridge',
+    name: 'FoodTech Innovations',
+    year: 2024,
+    month: 10, // Nov 2024
+    performance: 'moderate',
+    sector: 'FoodTech',
+    stage: 'SEED' as InvestmentStage,
+    geography: 'Sweden',
+    investmentType: 'SAFE' as InvestmentType,
+    committedCapital: 750000,
+    deployedCapital: 750000,
+    ownership: 12.0,
+    roundSize: 2500000,
+    enterpriseValue: 8000000,
+    initialCash: 1000000,
+  },
+  {
+    name: 'PropTech Ventures',
     year: 2025,
-    month: 1, // Feb 2025
+    month: 0, // Jan 2025
     performance: 'struggling',
+    sector: 'PropTech',
+    stage: 'SERIES_A' as InvestmentStage,
+    geography: 'Ireland',
+    investmentType: 'CONVERTIBLE' as InvestmentType,
+    committedCapital: 1800000,
+    deployedCapital: 1800000,
+    ownership: 11.0,
+    roundSize: 5000000,
+    enterpriseValue: 18000000,
+    initialCash: 1500000,
   },
   {
-    name: 'FraudGuard AI',
+    name: 'AI Robotics Labs',
     year: 2025,
-    month: 3, // Apr 2025
+    month: 2, // Mar 2025
     performance: 'strong',
+    sector: 'DeepTech',
+    stage: 'SERIES_B' as InvestmentStage,
+    geography: 'Switzerland',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 7000000,
+    deployedCapital: 7000000,
+    ownership: 9.0,
+    roundSize: 20000000,
+    enterpriseValue: 100000000,
+    initialCash: 8000000,
   },
   {
-    name: 'TradeTech Exchange',
+    name: 'InsureTech Connect',
     year: 2025,
-    month: 6, // Jul 2025
+    month: 5, // Jun 2025
     performance: 'moderate',
-  },
-  {
-    name: 'ReguComply Suite',
-    year: 2025,
-    month: 9, // Oct 2025
-    performance: 'moderate',
+    sector: 'InsurTech',
+    stage: 'SEED' as InvestmentStage,
+    geography: 'Denmark',
+    investmentType: 'EQUITY' as InvestmentType,
+    committedCapital: 600000,
+    deployedCapital: 600000,
+    ownership: 10.0,
+    roundSize: 2000000,
+    enterpriseValue: 7000000,
+    initialCash: 900000,
   },
 ];
 
@@ -153,38 +253,54 @@ async function main() {
 
     console.log(`Creating ${company.name}...`);
 
+    // Calculate realistic monthly burn based on stage and performance
+    const baseBurn = company.stage === 'SEED' ? 40000 : company.stage === 'SERIES_A' ? 80000 : 150000;
+    const burnMultiplier = company.performance === 'struggling' ? 1.5 : company.performance === 'moderate' ? 1.0 : 0.7;
+    const monthlyBurn = Math.round(baseBurn * burnMultiplier);
+
+    // Calculate runway: (initial cash + deployed capital) / monthly burn
+    const totalCash = company.initialCash + (company.deployedCapital - company.committedCapital);
+    const calculatedRunway = Math.round(totalCash / monthlyBurn);
+
+    // Calculate current fair value with markup/markdown based on performance
+    const fairValueMultiplier = company.performance === 'strong' ? 1.3 : company.performance === 'moderate' ? 1.0 : 0.7;
+    const currentFairValue = Math.round(company.committedCapital * fairValueMultiplier);
+
+    // Determine next round based on stage
+    const nextRound = company.stage === 'SEED' ? 'Series A' : company.stage === 'SERIES_A' ? 'Series B' : 'Series C';
+
     const investment = await prisma.investment.create({
       data: {
         icReference: `IC-${company.year}-${String(icCounter++).padStart(3, '0')}`,
         icApprovalDate: new Date(investmentDate.getTime() - 14 * 24 * 60 * 60 * 1000), // 2 weeks before
         investmentExecutionDate: investmentDate,
         companyName: company.name,
-        sector: 'FinTech',
-        stage: 'SERIES_A' as InvestmentStage,
-        geography: 'Europe',
-        investmentType: 'EQUITY' as InvestmentType,
-        committedCapitalLcl: 2000000,
-        deployedCapitalLcl: 2000000,
-        ownershipPercent: 15.0,
-        coInvestors: null,
-        hasBoardSeat: true,
+        sector: company.sector,
+        stage: company.stage,
+        geography: company.geography,
+        investmentType: company.investmentType,
+        committedCapitalLcl: company.committedCapital,
+        deployedCapitalLcl: company.deployedCapital,
+        ownershipPercent: company.ownership,
+        coInvestors: company.stage === 'SERIES_B' ? 'Accel Partners, Index Ventures' : null,
+        hasBoardSeat: company.stage !== 'SEED',
         hasProRataRights: true,
-        hasAntiDilutionProtection: true,
-        roundSizeEur: 5000000,
-        enterpriseValueEur: 20000000,
-        currentFairValueEur: 2000000,
+        hasAntiDilutionProtection: company.stage !== 'SEED',
+        roundSizeEur: company.roundSize,
+        enterpriseValueEur: company.enterpriseValue,
+        currentFairValueEur: currentFairValue,
         snapshotDate: investmentDate,
-        cashAtSnapshot: 1500000,
-        monthlyBurn: company.performance === 'struggling' ? 120000 : company.performance === 'moderate' ? 80000 : 50000,
-        calculatedRunwayMonths: company.performance === 'struggling' ? 12 : company.performance === 'moderate' ? 18 : 24,
-        customersAtSnapshot: 50,
-        arrAtSnapshot: 600000,
-        liquidityExpectation: 'Series B',
-        expectedLiquidityDate: new Date(2026, 6, 1), // Mid 2026
-        expectedLiquidityMultiple: 3.0,
-        raisedFollowOnCapital: false,
+        cashAtSnapshot: company.initialCash,
+        monthlyBurn: monthlyBurn,
+        calculatedRunwayMonths: calculatedRunway,
+        customersAtSnapshot: company.stage === 'SEED' ? 20 : company.stage === 'SERIES_A' ? 50 : 200,
+        arrAtSnapshot: company.stage === 'SEED' ? 200000 : company.stage === 'SERIES_A' ? 600000 : 2500000,
+        liquidityExpectation: nextRound,
+        expectedLiquidityDate: new Date(investmentDate.getFullYear() + 2, investmentDate.getMonth(), 1),
+        expectedLiquidityMultiple: company.performance === 'strong' ? 3.5 : company.performance === 'moderate' ? 2.5 : 1.5,
+        raisedFollowOnCapital: company.stage === 'SERIES_B',
         clearProductMarketFit: company.performance !== 'struggling',
-        meaningfulRevenue: true,
+        meaningfulRevenue: company.stage !== 'SEED',
         status: 'ACTIVE' as InvestmentStatus,
         founders: {
           create: [
