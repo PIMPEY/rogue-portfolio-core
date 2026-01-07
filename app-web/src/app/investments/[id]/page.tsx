@@ -245,14 +245,9 @@ export default function InvestmentDetail({ params }: { params: Promise<{ id: str
   };
 
   const prepareChartData = (forecast: Array<{ quarterIndex: number; value: number }>, actual: Array<{ quarter: number; value: number }>) => {
-    const maxPeriod = Math.max(
-      ...forecast.map(f => f.quarterIndex),
-      ...actual.map(a => a.quarter),
-      20 // Default to 20 quarters (5 years) if no data
-    );
-
     const data = [];
-    for (let period = 1; period <= maxPeriod; period++) {
+    // Always show Y1-Y5 (5 years)
+    for (let period = 1; period <= 5; period++) {
       const forecastPoint = forecast.find(f => f.quarterIndex === period);
       const actualPoint = actual.find(a => a.quarter === period);
 

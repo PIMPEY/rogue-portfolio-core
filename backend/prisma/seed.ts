@@ -8,52 +8,62 @@ const prisma = new PrismaClient();
 const companies = [
   {
     name: 'PayFlow Solutions',
-    investmentMonth: 0, // Jan 2024
-    performance: 'strong', // Strong revenue growth, positive trajectory
+    year: 2024,
+    month: 0, // Jan 2024
+    performance: 'strong',
   },
   {
     name: 'CreditEdge Analytics',
-    investmentMonth: 1, // Feb 2024
-    performance: 'moderate', // Steady growth
+    year: 2024,
+    month: 2, // Mar 2024
+    performance: 'moderate',
   },
   {
     name: 'WealthVista',
-    investmentMonth: 2, // Mar 2024
-    performance: 'struggling', // Higher burn, slower revenue
+    year: 2024,
+    month: 5, // Jun 2024
+    performance: 'struggling',
   },
   {
     name: 'InsureTech Pro',
-    investmentMonth: 3, // Apr 2024
+    year: 2024,
+    month: 7, // Aug 2024
     performance: 'strong',
   },
   {
     name: 'BlockChain Finance',
-    investmentMonth: 4, // May 2024
+    year: 2024,
+    month: 9, // Oct 2024
     performance: 'moderate',
   },
   {
     name: 'NeoBank Digital',
-    investmentMonth: 5, // Jun 2024
+    year: 2024,
+    month: 11, // Dec 2024
     performance: 'strong',
   },
   {
     name: 'LendingBridge',
-    investmentMonth: 6, // Jul 2024
+    year: 2025,
+    month: 1, // Feb 2025
     performance: 'struggling',
   },
   {
     name: 'FraudGuard AI',
-    investmentMonth: 7, // Aug 2024
+    year: 2025,
+    month: 3, // Apr 2025
     performance: 'strong',
   },
   {
     name: 'TradeTech Exchange',
-    investmentMonth: 8, // Sep 2024
+    year: 2025,
+    month: 6, // Jul 2025
     performance: 'moderate',
   },
   {
     name: 'ReguComply Suite',
-    investmentMonth: 9, // Oct 2024
+    year: 2025,
+    month: 9, // Oct 2025
     performance: 'moderate',
   },
 ];
@@ -78,8 +88,8 @@ function generateForecastMetrics(performance: string) {
 
   const rates = growthRates[performance as keyof typeof growthRates];
 
-  // Generate 20 quarters (5 years)
-  for (let q = 1; q <= 20; q++) {
+  // Generate 5 years (Y1-Y5)
+  for (let q = 1; q <= 5; q++) {
     const revenue = Math.round(baseRevenue * Math.pow(rates.revenue, q - 1));
     const cogs = Math.round(baseCOGS * Math.pow(rates.cogs, q - 1));
     const opex = Math.round(baseOPEX * Math.pow(rates.opex, q - 1));
@@ -130,16 +140,22 @@ async function main() {
   await prisma.investment.deleteMany();
 
   // Create 10 companies
+  let icCounter = 1;
   for (const company of companies) {
-    const investmentDate = new Date(2024, company.investmentMonth, 15); // 15th of each month
+    const investmentDate = new Date(company.year, company.month, 15); // 15th of each month
     const dealOwners = ['Sarah Chen', 'Marcus Rodriguez', 'Emily Thompson'];
     const dealOwner = dealOwners[Math.floor(Math.random() * dealOwners.length)];
+
+    // Calculate how many quarters have passed since investment (for actuals)
+    const now = new Date();
+    const monthsSinceInvestment = (now.getFullYear() - company.year) * 12 + (now.getMonth() - company.month);
+    const quartersSinceInvestment = Math.floor(monthsSinceInvestment / 3);
 
     console.log(`Creating ${company.name}...`);
 
     const investment = await prisma.investment.create({
       data: {
-        icReference: `IC-2024-${String(company.investmentMonth + 1).padStart(3, '0')}`,
+        icReference: `IC-${company.year}-${String(icCounter++).padStart(3, '0')}`,
         icApprovalDate: new Date(investmentDate.getTime() - 14 * 24 * 60 * 60 * 1000), // 2 weeks before
         investmentExecutionDate: investmentDate,
         companyName: company.name,
@@ -182,7 +198,7 @@ async function main() {
           create: {
             version: 1,
             startQuarter: investmentDate,
-            horizonQuarters: 20,
+            horizonQuarters: 5,
             rationale: 'Series A financial forecast - 5 year projection',
             metrics: {
               create: generateForecastMetrics(company.performance),
@@ -192,7 +208,48 @@ async function main() {
       },
     });
 
-    console.log(`✓ Created ${company.name} (${investment.id})`);
+    // Generate actuals for quarters since investment
+    if (quartersSinceInvestment > 0) {
+      const forecast = await prisma.forecast.findFirst({
+        where: { investmentId: investment.id },
+        include: { metrics: true }
+      });
+
+      if (forecast) {
+        // Generate actuals with variance based on performance
+        const varianceMultipliers = {
+          strong: { min: 0.95, max: 1.15 }, // Beating forecast
+          moderate: { min: 0.90, max: 1.05 }, // Close to forecast
+          struggling: { min: 0.60, max: 0.85 }, // Missing forecast
+        };
+
+        const variance = varianceMultipliers[company.performance as keyof typeof varianceMultipliers];
+
+        for (let q = 1; q <= Math.min(quartersSinceInvestment, 5); q++) {
+          const forecastRevenue = forecast.metrics.find(m => m.metric === 'REVENUE' && m.quarterIndex === q)?.value || 0;
+          const forecastBurn = forecast.metrics.find(m => m.metric === 'BURN' && m.quarterIndex === q)?.value || 0;
+          const forecastTraction = forecast.metrics.find(m => m.metric === 'TRACTION' && m.quarterIndex === q)?.value || 0;
+
+          const actualMultiplier = variance.min + Math.random() * (variance.max - variance.min);
+
+          await prisma.founderUpdate.create({
+            data: {
+              investmentId: investment.id,
+              quarterIndex: q,
+              dueDate: new Date(investmentDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
+              submittedAt: new Date(investmentDate.getTime() + q * 90 * 24 * 60 * 60 * 1000),
+              status: 'SUBMITTED',
+              actualRevenue: Math.round(forecastRevenue * actualMultiplier),
+              actualBurn: Math.round(forecastBurn * (company.performance === 'struggling' ? 1.2 : 1.0)),
+              actualRunwayMonths: company.performance === 'struggling' ? 10 : company.performance === 'moderate' ? 16 : 22,
+              actualTraction: Math.round(forecastTraction * actualMultiplier),
+            }
+          });
+        }
+      }
+    }
+
+    console.log(`✓ Created ${company.name} with ${quartersSinceInvestment} quarters of actuals (${investment.id})`);
   }
 
   console.log('✅ Seed completed!');
