@@ -1,6 +1,6 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, Label } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface Investment {
   id: string;
@@ -9,6 +9,10 @@ interface Investment {
   stage: string;
   geography: string;
   status: 'GREEN' | 'AMBER' | 'RED';
+  committedCapitalEur: number;
+  deployedCapitalEur: number;
+  currentFairValueEur: number;
+  runway: number | null;
 }
 
 interface PortfolioChartsProps {
@@ -74,6 +78,50 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
   const geographyData = getGeographyData();
   const statusData = getStatusData();
 
+  // Calculate aggregate metrics
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const totalCommitted = investments.reduce((sum, inv) => sum + inv.committedCapitalEur, 0);
+  const totalDeployed = investments.reduce((sum, inv) => sum + inv.deployedCapitalEur, 0);
+  const totalCurrentValue = investments.reduce((sum, inv) => sum + inv.currentFairValueEur, 0);
+  const investmentsWithRunway = investments.filter(i => i.runway !== null);
+  const avgRunway = investmentsWithRunway.length > 0
+    ? investmentsWithRunway.reduce((sum, i) => sum + (i.runway || 0), 0) / investmentsWithRunway.length
+    : 0;
+
+  // Capital deployed by sector
+  const sectorCapitalData = Object.entries(
+    investments.reduce((acc, inv) => {
+      acc[inv.sector] = (acc[inv.sector] || 0) + inv.deployedCapitalEur;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+  // Runway distribution
+  const runwayRanges = [
+    { name: '0-6m', min: 0, max: 6, count: 0 },
+    { name: '6-12m', min: 6, max: 12, count: 0 },
+    { name: '12-18m', min: 12, max: 18, count: 0 },
+    { name: '18-24m', min: 18, max: 24, count: 0 },
+    { name: '24+m', min: 24, max: Infinity, count: 0 },
+  ];
+
+  investments.forEach(inv => {
+    if (inv.runway !== null) {
+      const range = runwayRanges.find(r => inv.runway! >= r.min && inv.runway! < r.max);
+      if (range) range.count++;
+    }
+  });
+
+  const runwayData = runwayRanges.filter(r => r.count > 0).map(r => ({ name: r.name, value: r.count }));
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
@@ -132,7 +180,60 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="mb-8 space-y-6">
+      {/* Portfolio Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Total Committed</h3>
+          <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalCommitted)}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Total Deployed</h3>
+          <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalDeployed)}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Current Portfolio Value</h3>
+          <div className="text-2xl font-bold text-gray-900">{formatCurrency(totalCurrentValue)}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Avg Runway</h3>
+          <div className="text-2xl font-bold text-gray-900">{avgRunway.toFixed(1)} months</div>
+        </div>
+      </div>
+
+      {/* Additional Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Capital Deployed by Sector */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Capital Deployed by Sector</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={sectorCapitalData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis tickFormatter={(value) => `€${(value / 1000000).toFixed(1)}M`} />
+              <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'} />
+              <Bar dataKey="value" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Runway Distribution */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Runway Distribution</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={runwayData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#8b5cf6" name="Companies" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Existing Pie Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Geography</h3>
         <ResponsiveContainer width="100%" height={200}>
@@ -323,6 +424,7 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

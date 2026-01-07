@@ -3,7 +3,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// import PortfolioCharts from '@/components/PortfolioCharts';
+import PortfolioCharts from '@/components/PortfolioCharts';
 // import ActionsPanel from '@/components/ActionsPanel';
 
 interface Investment {
@@ -497,11 +497,11 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
           {/* <ActionsPanel /> */}
         </div>
 
-        {/* <PortfolioCharts
+        <PortfolioCharts
           investments={investments}
           onFilter={handleChartFilter}
           activeFilter={chartFilter}
-        /> */}
+        />
 
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
