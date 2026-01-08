@@ -29,7 +29,8 @@ export async function parseExcelFile(buffer: Buffer): Promise<string> {
 export async function parsePdfFile(buffer: Buffer): Promise<string> {
   try {
     // Dynamic import for pdf-parse to handle CommonJS module
-    const pdfParse = (await import('pdf-parse')).default;
+    const pdfParseModule = await import('pdf-parse');
+    const pdfParse = pdfParseModule.default as any;
     const data = await pdfParse(buffer);
     return data.text;
   } catch (error: any) {

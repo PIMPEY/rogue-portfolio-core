@@ -294,8 +294,6 @@ async function createInvestment(data: InvestmentData) {
       investmentType: (data.investmentType as InvestmentType) || 'EQUITY',
       committedCapitalLcl: data.committedCapital || 0,
       deployedCapitalLcl: data.deployedCapital || data.committedCapital || 0,
-      committedCapitalEur: data.committedCapital || 0,
-      deployedCapitalEur: data.deployedCapital || data.committedCapital || 0,
       ownershipPercent: data.ownershipPercent || null,
       roundSizeEur: data.roundSize || null,
       enterpriseValueEur: data.enterpriseValue || null,
