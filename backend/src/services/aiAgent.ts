@@ -1,7 +1,11 @@
 const TENSORIX_API_KEY = process.env.TENSORIX_API_KEY || '';
 const TENSORIX_BASE_URL = 'https://api.tensorix.ai/v1';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const USE_OPENAI = true; // Set to true to use OpenAI instead of Tensorix
 
-console.log('🔑 Tensorix API Key loaded:', TENSORIX_API_KEY ? `${TENSORIX_API_KEY.substring(0, 10)}...` : 'NOT SET');
+console.log('🔑 API Key loaded:', USE_OPENAI
+  ? (OPENAI_API_KEY ? `OpenAI: ${OPENAI_API_KEY.substring(0, 10)}...` : 'OpenAI: NOT SET')
+  : (TENSORIX_API_KEY ? `Tensorix: ${TENSORIX_API_KEY.substring(0, 10)}...` : 'Tensorix: NOT SET'));
 
 export interface InvestmentData {
   companyName: string;
@@ -91,18 +95,22 @@ Return ONLY a JSON object with this exact structure:
   "confidence": "high" | "medium" | "low"
 }`;
 
-      console.log('🤖 Making AI request with model: deepseek/deepseek-chat-v3.1');
-      console.log('🔑 API Key (first 10 chars):', TENSORIX_API_KEY.substring(0, 10));
-      console.log('🌐 Base URL:', TENSORIX_BASE_URL);
+      const model = USE_OPENAI ? 'gpt-4o-mini' : 'deepseek/deepseek-chat-v3.1';
+      const apiUrl = USE_OPENAI ? 'https://api.openai.com/v1/chat/completions' : `${TENSORIX_BASE_URL}/chat/completions`;
+      const apiKey = USE_OPENAI ? OPENAI_API_KEY : TENSORIX_API_KEY;
 
-      const apiResponse = await fetch(`${TENSORIX_BASE_URL}/chat/completions`, {
+      console.log('🤖 Making AI request with model:', model);
+      console.log('🔑 API Key (first 10 chars):', apiKey.substring(0, 10));
+      console.log('🌐 API URL:', apiUrl);
+
+      const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'x-api-key': TENSORIX_API_KEY,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek/deepseek-chat-v3.1',
+          model,
           messages: [
             {
               role: 'system',
