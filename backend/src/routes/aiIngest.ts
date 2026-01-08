@@ -219,13 +219,11 @@ router.post('/analyze', async (req: Request, res: Response) => {
         sector: true,
         stage: true,
         geography: true,
-        committedCapitalEur: true,
-        deployedCapitalEur: true,
+        committedCapitalLcl: true,
+        deployedCapitalLcl: true,
         currentFairValueEur: true,
         status: true,
         calculatedRunwayMonths: true,
-        grossMoic: true,
-        grossIrr: true,
       },
     });
 
@@ -308,12 +306,18 @@ async function createInvestment(data: InvestmentData) {
       calculatedRunwayMonths: calculatedRunway,
       status: 'ACTIVE' as InvestmentStatus,
       hasProRataRights: true,
-      notes: data.notes || null,
       founders: data.founderNames && data.founderNames.length > 0 ? {
         create: data.founderNames.map((name, idx) => ({
           name,
           email: data.founderEmails?.[idx] || null,
         })),
+      } : undefined,
+      notes: data.notes ? {
+        create: {
+          authorUserId: 'ai-agent',
+          body: data.notes,
+          createdAt: new Date(),
+        }
       } : undefined,
     },
   });

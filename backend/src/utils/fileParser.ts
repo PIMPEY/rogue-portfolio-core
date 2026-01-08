@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx';
-import pdfParse from 'pdf-parse';
 
 /**
  * Parse Excel file to text
@@ -29,6 +28,8 @@ export async function parseExcelFile(buffer: Buffer): Promise<string> {
  */
 export async function parsePdfFile(buffer: Buffer): Promise<string> {
   try {
+    // Dynamic import for pdf-parse to handle CommonJS module
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer);
     return data.text;
   } catch (error: any) {
