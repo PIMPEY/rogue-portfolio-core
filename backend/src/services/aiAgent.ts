@@ -98,7 +98,7 @@ Return ONLY a JSON object with this exact structure:
       const apiResponse = await fetch(`${TENSORIX_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${TENSORIX_API_KEY}`,
+          'Authorization': TENSORIX_API_KEY,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
