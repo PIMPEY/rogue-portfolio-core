@@ -14,6 +14,7 @@ import { requireChangeRationale, ChangeRationaleRequest } from './middleware/cha
 
 
 import ExcelTemplateProcessor from "../excel-template-processor.js";
+import aiIngestRoutes from './routes/aiIngest';
 
 
 console.log('🚀 Starting backend server...');
@@ -32,6 +33,9 @@ app.use(express.json());
 
 // Configure multer for file uploads (in-memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Register AI ingestion routes
+app.use('/api/ai', aiIngestRoutes);
 
 // Simple health check that works even before database connection
 app.get('/health', (req, res) => {
