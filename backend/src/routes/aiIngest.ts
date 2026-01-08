@@ -1,9 +1,33 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient, InvestmentType, InvestmentStatus, InvestmentStage } from '@prisma/client';
+import multer from 'multer';
 import { investmentDataAgent, InvestmentData } from '../services/aiAgent';
+import { parseFile } from '../utils/fileParser';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Configure multer for file uploads (store in memory)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+    ];
+
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(pdf|xlsx?|csv)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, Excel (xlsx/xls), and CSV files are allowed'));
+    }
+  },
+});
 
 /**
  * POST /api/ai/ingest
@@ -81,6 +105,103 @@ router.post('/ingest', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to process investment data',
+    });
+  }
+});
+
+/**
+ * POST /api/ai/ingest/upload
+ * Parse and ingest investment data from uploaded files (PDF, Excel, CSV)
+ *
+ * Form data:
+ * - file: File (PDF, Excel, or CSV)
+ * - autoImport: boolean (if true, automatically import to database)
+ */
+router.post('/ingest/upload', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded. Please upload a PDF, Excel, or CSV file.',
+      });
+    }
+
+    const autoImport = req.body.autoImport === 'true' || req.body.autoImport === true;
+
+    console.log(`📄 Processing uploaded file: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
+
+    // Parse file to text
+    let extractedText: string;
+    try {
+      extractedText = await parseFile(req.file.buffer, req.file.mimetype, req.file.originalname);
+      console.log(`✅ Successfully extracted text from file (${extractedText.length} characters)`);
+    } catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        error: `Failed to parse file: ${error.message}`,
+      });
+    }
+
+    // Use AI agent to parse the extracted text
+    console.log('🤖 Parsing extracted text with AI agent...');
+    const parsed = await investmentDataAgent.parseInvestmentData(extractedText);
+
+    if (parsed.investments.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No investment data could be extracted from the uploaded file',
+        warnings: parsed.warnings,
+        extractedText: extractedText.substring(0, 500), // Show first 500 chars for debugging
+      });
+    }
+
+    // If autoImport is true, save to database
+    if (autoImport) {
+      const imported = [];
+      const errors = [];
+
+      for (const inv of parsed.investments) {
+        try {
+          const investment = await createInvestment(inv);
+          imported.push(investment);
+        } catch (error: any) {
+          errors.push({
+            companyName: inv.companyName,
+            error: error.message,
+          });
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: `Successfully imported ${imported.length} out of ${parsed.investments.length} investments from ${req.file.originalname}`,
+        data: {
+          parsed: parsed.investments,
+          imported,
+          errors,
+          warnings: parsed.warnings,
+          confidence: parsed.confidence,
+          fileName: req.file.originalname,
+        },
+      });
+    }
+
+    // Return parsed data without importing
+    return res.json({
+      success: true,
+      message: `Successfully parsed ${parsed.investments.length} investment(s) from ${req.file.originalname}. Use autoImport=true to save to database.`,
+      data: {
+        parsed: parsed.investments,
+        warnings: parsed.warnings,
+        confidence: parsed.confidence,
+        fileName: req.file.originalname,
+      },
+    });
+  } catch (error: any) {
+    console.error('File upload ingestion error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to process uploaded file',
     });
   }
 });

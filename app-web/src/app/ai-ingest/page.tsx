@@ -40,9 +40,11 @@ interface ParsedResponse {
 export default function AIIngestPage() {
   const router = useRouter();
   const [inputText, setInputText] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ParsedResponse | null>(null);
   const [autoImport, setAutoImport] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'text' | 'file'>('text');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +88,53 @@ export default function AIIngestPage() {
     }
   };
 
+  const handleFileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    setLoading(true);
+    setResponse(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('autoImport', String(autoImport));
+
+      const res = await fetch(`${BACKEND_URL}/api/ai/ingest/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      setResponse(data);
+
+      if (data.success && autoImport && data.data?.imported?.length > 0) {
+        // Redirect to portfolio page after successful import
+        setTimeout(() => {
+          router.push('/');
+        }, 3000);
+      }
+    } catch (error: any) {
+      setResponse({
+        success: false,
+        error: error.message || 'Failed to process file',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setResponse(null);
+    }
+  };
+
   const handleAnalyze = async () => {
     setLoading(true);
     try {
@@ -112,7 +161,7 @@ export default function AIIngestPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">AI Investment Ingestion</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Parse investment data from unstructured text using AI. Paste any text containing investment information below.
+            Parse investment data from unstructured text or upload files (PDF, Excel, CSV) using AI.
           </p>
         </div>
 
@@ -121,7 +170,40 @@ export default function AIIngestPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Input</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadMode('text');
+                  setResponse(null);
+                }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  uploadMode === 'text'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📝 Text Input
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadMode('file');
+                  setResponse(null);
+                }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  uploadMode === 'file'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📎 File Upload
+              </button>
+            </div>
+
+            {uploadMode === 'text' ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="input-text" className="block text-sm font-medium text-gray-700 mb-2">
                   Paste investment data
@@ -174,22 +256,12 @@ Or paste multiple investments, CSV data, emails, etc.`}
               >
                 {loading ? 'Processing...' : 'Parse Investment Data'}
               </button>
-            </form>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <button
-                onClick={handleAnalyze}
-                disabled={loading}
-                className="w-full py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
-              >
-                Analyze Portfolio with AI
-              </button>
-            </div>
-
-            {/* Example Button */}
-            <div className="mt-4">
-              <button
-                onClick={() => setInputText(`Company: TechCorp AI
+              {/* Example Button */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setInputText(`Company: TechCorp AI
 Sector: DeepTech
 Stage: Series B
 We invested €5M at a €50M valuation
@@ -198,9 +270,95 @@ Investment date: March 15, 2025
 Total round: €15M
 Founders: Alice Johnson (alice@techcorp.ai) and Bob Williams
 Current cash: €8M, burning €150k/month`)}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Load example data
+                </button>
+              </div>
+            </form>
+            ) : (
+              <form onSubmit={handleFileUpload} className="space-y-4">
+                <div>
+                  <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload file (PDF, Excel, CSV)
+                  </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400">
+                    <div className="space-y-1 text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="file-upload"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>Upload a file</span>
+                          <input
+                            id="file-upload"
+                            name="file-upload"
+                            type="file"
+                            className="sr-only"
+                            accept=".pdf,.xlsx,.xls,.csv"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PDF, Excel, or CSV up to 10MB</p>
+                    </div>
+                  </div>
+                  {selectedFile && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      Selected: <span className="font-medium">{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(2)} KB)
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="auto-import-file"
+                    checked={autoImport}
+                    onChange={(e) => setAutoImport(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="auto-import-file" className="ml-2 block text-sm text-gray-700">
+                    Automatically import to database after parsing
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !selectedFile}
+                  className={`w-full py-2 px-4 border border-transparent rounded-lg text-white font-medium ${
+                    loading || !selectedFile
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                  }`}
+                >
+                  {loading ? 'Processing...' : 'Upload and Parse File'}
+                </button>
+              </form>
+            )}
+
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={handleAnalyze}
+                disabled={loading}
+                className="w-full py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
               >
-                Load example data
+                Analyze Portfolio with AI
               </button>
             </div>
           </div>
