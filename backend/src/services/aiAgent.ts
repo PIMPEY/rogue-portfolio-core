@@ -119,7 +119,13 @@ Return ONLY a JSON object with this exact structure:
       });
 
       if (!apiResponse.ok) {
-        throw new Error(`API request failed with status ${apiResponse.status}`);
+        const errorText = await apiResponse.text();
+        console.error('❌ API request failed:', {
+          status: apiResponse.status,
+          statusText: apiResponse.statusText,
+          body: errorText,
+        });
+        throw new Error(`API request failed with status ${apiResponse.status}: ${errorText}`);
       }
 
       const response: any = await apiResponse.json();

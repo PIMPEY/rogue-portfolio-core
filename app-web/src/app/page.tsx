@@ -447,10 +447,16 @@ export default function PortfolioDashboard() {  const BACKEND_URL = process.env.
             </div>
             <div className="flex gap-3">
               <Link
-                href="/simple-mvp"
+                href="/ai-ingest"
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
               >
-                Simple MVP (No AWS)
+                AI Import
+              </Link>
+              <Link
+                href="/simple-mvp"
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Simple MVP
               </Link>
               <Link
                 href="/investments/create"

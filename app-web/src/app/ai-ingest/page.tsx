@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -159,10 +160,20 @@ export default function AIIngestPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">AI Investment Ingestion</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Parse investment data from unstructured text or upload files (PDF, Excel, CSV) using AI.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">AI Investment Ingestion</h1>
+              <p className="mt-2 text-sm text-gray-600">
+                Parse investment data from unstructured text or upload files (PDF, Excel, CSV) using AI.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Back to Portfolio
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
