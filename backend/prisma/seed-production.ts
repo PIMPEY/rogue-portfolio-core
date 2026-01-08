@@ -126,7 +126,7 @@ const companies = [
     sector: 'PropTech',
     stage: 'SERIES_A' as InvestmentStage,
     geography: 'Ireland',
-    investmentType: 'CONVERTIBLE' as InvestmentType,
+    investmentType: 'CLN' as InvestmentType,
     committedCapital: 1800000,
     deployedCapital: 1800000,
     ownership: 11.0,
