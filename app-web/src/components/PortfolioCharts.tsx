@@ -1,6 +1,6 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
 
 interface Investment {
   id: string;
@@ -148,10 +148,10 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
     capital: r.total
   }));
 
-  // Concentration risk - top 5 investments by capital
+  // Concentration risk - top 10 investments by capital
   const concentrationData = investments
     .sort((a, b) => b.deployedCapitalEur - a.deployedCapitalEur)
-    .slice(0, 5)
+    .slice(0, 10)
     .map(inv => ({
       name: inv.companyName.length > 15 ? inv.companyName.substring(0, 15) + '...' : inv.companyName,
       value: inv.deployedCapitalEur,
@@ -179,6 +179,65 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
 
   // Capital deployment efficiency
   const deploymentEfficiency = ((totalDeployed / totalCommitted) * 100).toFixed(1);
+
+  // Portfolio Valuation Progression - track how portfolio value evolved over time
+  const valuationProgressionData = investments
+    .sort((a, b) => new Date(a.investmentDate).getTime() - new Date(b.investmentDate).getTime())
+    .reduce((acc, inv, index) => {
+      const prevCost = index > 0 ? acc[index - 1].costBasis : 0;
+      const prevValue = index > 0 ? acc[index - 1].currentValue : 0;
+
+      acc.push({
+        date: new Date(inv.investmentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+        costBasis: prevCost + inv.deployedCapitalEur,
+        currentValue: prevValue + inv.currentFairValueEur,
+        company: inv.companyName
+      });
+
+      return acc;
+    }, [] as Array<{ date: string; costBasis: number; currentValue: number; company: string }>);
+
+  // Fundraise Calendar - show expected fundraising timeline over 5 years
+  const fundraiseCalendarData = (() => {
+    const quarters: Record<string, number> = {};
+    const now = new Date();
+
+    // Generate quarters for next 5 years (20 quarters)
+    for (let i = 0; i < 20; i++) {
+      const quarterDate = new Date(now);
+      quarterDate.setMonth(now.getMonth() + (i * 3));
+      const quarterKey = `Q${Math.floor(quarterDate.getMonth() / 3) + 1} ${quarterDate.getFullYear()}`;
+      quarters[quarterKey] = 0;
+    }
+
+    // Count companies expected to fundraise in each quarter
+    investments.forEach(inv => {
+      if (inv.runway !== null && inv.runway > 0) {
+        const investmentDate = new Date(inv.investmentDate);
+        const fundraiseDate = new Date(investmentDate);
+        fundraiseDate.setMonth(investmentDate.getMonth() + inv.runway);
+
+        // Determine which quarter this falls into
+        const monthsFromNow = (fundraiseDate.getFullYear() - now.getFullYear()) * 12 +
+                              (fundraiseDate.getMonth() - now.getMonth());
+        const quarterIndex = Math.floor(monthsFromNow / 3);
+
+        if (quarterIndex >= 0 && quarterIndex < 20) {
+          const quarterDate = new Date(now);
+          quarterDate.setMonth(now.getMonth() + (quarterIndex * 3));
+          const quarterKey = `Q${Math.floor(quarterDate.getMonth() / 3) + 1} ${quarterDate.getFullYear()}`;
+          if (quarters[quarterKey] !== undefined) {
+            quarters[quarterKey]++;
+          }
+        }
+      }
+    });
+
+    return Object.entries(quarters).map(([quarter, count]) => ({
+      quarter,
+      count
+    }));
+  })();
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -275,16 +334,23 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
           </ResponsiveContainer>
         </div>
 
-        {/* Runway Distribution */}
+        {/* Fundraise Calendar */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Runway Distribution</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Fundraise Calendar (5Y)</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={runwayData}>
+            <BarChart data={fundraiseCalendarData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis
+                dataKey="quarter"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={0}
+                tick={{ fontSize: 10 }}
+              />
               <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#8b5cf6" name="Companies" />
+              <Tooltip formatter={(value: number | undefined) => value !== undefined ? `${value} companies` : 'N/A'} />
+              <Bar dataKey="count" fill="#8b5cf6" name="Expected Fundraises" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -308,7 +374,7 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
 
         {/* Concentration Risk */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Top 5 Investments (Capital)</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Top 10 Investments (Capital)</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={concentrationData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -334,6 +400,61 @@ export default function PortfolioCharts({ investments, onFilter, activeFilter }:
           </ResponsiveContainer>
           <div className="mt-4 text-sm text-gray-600">
             <p>Capital Deployment: <span className="font-semibold">{deploymentEfficiency}%</span></p>
+          </div>
+        </div>
+      </div>
+
+      {/* Portfolio Valuation Progression */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Portfolio Valuation Progression</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={valuationProgressionData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="date"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              interval={0}
+              tick={{ fontSize: 10 }}
+            />
+            <YAxis tickFormatter={(value) => `€${(value / 1000000).toFixed(1)}M`} />
+            <Tooltip
+              formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : 'N/A'}
+              labelStyle={{ color: '#000' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="costBasis"
+              stroke="#9ca3af"
+              strokeWidth={2}
+              name="Cost Basis"
+              dot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="currentValue"
+              stroke="#10b981"
+              strokeWidth={2}
+              name="Current Value"
+              dot={{ r: 4 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+        <div className="mt-4 flex justify-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-0.5 bg-gray-400"></div>
+            <span className="text-gray-600">Cost Basis: {formatCurrency(totalDeployed)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-0.5 bg-green-500"></div>
+            <span className="text-gray-600">Current Value: {formatCurrency(totalCurrentValue)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900">
+              Unrealized Gain: {formatCurrency(totalCurrentValue - totalDeployed)}
+              ({((totalCurrentValue / totalDeployed - 1) * 100).toFixed(1)}%)
+            </span>
           </div>
         </div>
       </div>
