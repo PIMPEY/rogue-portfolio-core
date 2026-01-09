@@ -1,7 +1,7 @@
 const TENSORIX_API_KEY = process.env.TENSORIX_API_KEY || '';
 const TENSORIX_BASE_URL = 'https://api.tensorix.ai/v1';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const USE_OPENAI = true; // Set to true to use OpenAI instead of Tensorix
+const USE_OPENAI = false; // Set to true to use OpenAI instead of Tensorix
 
 console.log('🔑 API Key loaded:', USE_OPENAI
   ? (OPENAI_API_KEY ? `OpenAI: ${OPENAI_API_KEY.substring(0, 10)}...` : 'OpenAI: NOT SET')
